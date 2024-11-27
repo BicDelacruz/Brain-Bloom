@@ -52,7 +52,7 @@
 			"cinttypes": "cpp",
 			"typeinfo": "cpp"
 		},
-		"git.autoRepositoryDetection": false,
-		"git.enabled": false
+		"git.autoRepositoryDetection": true,
+		"git.enabled": true
 	}
 }

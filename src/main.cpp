@@ -8,7 +8,7 @@
 //using namespace std;
 
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing, Color fontColor, float posY) {
@@ -19,9 +19,7 @@ void DrawTextHorizontal (Font font, const char* text, float fontSize, float font
 // Checks for any key press
 bool IsAnyKeyPressed() {
     for (int key = 32; key < 350; key++) { 
-        if (IsKeyPressed(key)) {
-            return true;
-        }        
+        if (IsKeyPressed(key)) return true;        
     }
     return false;
 }
@@ -35,40 +33,55 @@ int main(void)
     //--------------------------------------------------------------------------------------
     GameScreen currentScreen = MAIN_MENU;
     
-    /*********************************************************************** 
-    For debugging (for some reason can not alt-tab out of a fullscreen window):
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
-    InitWindow(screenWidth, screenHeight, "BRAIN BLOOM");
-    ***********************************************************************/
 
-    InitWindow(0,0, "Brain Bloom");
-    ToggleFullscreen();                 // Game launches at fullscreen, can be changed in the settings
-    SetExitKey(KEY_NULL);               // Default exit key was KEY_ESCAPE
+    int screenWidth = 1920;
+    int screenHeight = 1080;
+    InitWindow(screenWidth, screenHeight, "BRAIN BLOOM");
+
+    // Game launches at fullscreen, can be changed in the settings
+    //ToggleFullscreen();                   
+    SetExitKey(KEY_NULL);              
     SetTargetFPS(60);
     
     bool exitPressed = false;
 
+    // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f; // Cooldown time in seconds
-    float timer = 0.0f;
+    float timer = 0.0f; 
 
     Font arcadeFont = LoadFont("fonts/arcade.ttf");
 
+    // Main Menu Textures
     Texture2D titleLogo = LoadTexture("assets/title-logo.png");
-    Texture2D pausedTxt = LoadTexture("assets/game-paused-txt.png");
     Texture2D menuBackground = LoadTexture("assets/main-menu-bg.png");
-    Texture2D rulesBackground = LoadTexture("assets/rules-bg.png");
-    Texture2D rulesBox = LoadTexture("assets/rules-box.png");
-    Texture2D rulesTxt = LoadTexture("assets/rules-txt.png"); 
-    Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
+    Texture2D settingsBackground = LoadTexture("assets/settings-bg.png");
+    Texture2D rulesScreen = LoadTexture("assets/rules-screen.png");
+    Texture2D pausedTxt = LoadTexture("assets/game-paused-txt.png");
 
+    // Singleplayer Textures
+    Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
+    Texture2D questionBox = LoadTexture("assets/question-box.png");
+
+    // Main Menu Buttons
     Button onePlayerBtn{"assets/one-player-btn.png", {0, 500}, 0.5}; 
     Button twoPlayerBtn{"assets/two-players-btn.png", {0, 600}, 0.5};
     Button settingsBtn{"assets/settings-btn.png", {0, 700}, 0.6};
     Button exitBtn{"assets/exit-btn.png", {0, 800}, 0.6};
-    Button pauseBtn{"assets/pause-btn.png", {10, 10}, 0.8};
+
+    // Pause Buttons
+    Button pauseBtn{"assets/pause-btn.png", {10, 10}, 0.7};
     Button resumeBtn{"assets/resume-btn.png", {0, 400}, 0.7};
     Button mainMenuBtn{"assets/main-menu-btn.png", {0, 500}, 0.7};
+
+    // Singlepayer Buttons
+    Button answerQBtn{"assets/answer-q.png", {150, (float) (GetScreenHeight() - 350)}, 1.3};
+    Button answerWBtn{"assets/answer-w.png", {150, (float) (GetScreenHeight() - 200)}, 1.3};
+    Button answerEBtn{"assets/answer-e.png", {(float) (GetScreenWidth() - 900), (float) (GetScreenHeight() - 350)}, 1.3};
+    Button answerRBtn{"assets/answer-r.png", {(float) (GetScreenWidth() - 900), (float) (GetScreenHeight() - 200)}, 1.3};
+    Button skillABtn{"assets/skill-a.png", {0, 0}, 1};
+    Button skillSBtn{"assets/skill-s.png", {0, 0}, 1};
+    Button skillDBtn{"assets/skill-d.png", {0, 0}, 1};
+    Button skillFBtn{"assets/skill-f.png", {0, 0}, 1};
 
     Color pauseDark = {0,0,0, 100};
 
@@ -94,11 +107,17 @@ int main(void)
                     //timer = 0.0f;
                 }   
                 if (settingsBtn.isDrawn && settingsBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = SETTINGS;
                 }   
                 if (exitBtn.isDrawn && exitBtn.isClicked(mousePosition, mouseClicked)) {
                     exitPressed = true;
                 }   
             break;
+            case SETTINGS:
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    currentScreen = MAIN_MENU;
+                }
+                break;
             case SINGLEPLAYER:
                 if (pauseBtn.isDrawn && pauseBtn.isClicked(mousePosition, mouseClicked) ) {
                     currentScreen = PAUSE;
@@ -126,6 +145,7 @@ int main(void)
         // Draw
         
         BeginDrawing();
+        ClearBackground(GRAY);
 
         switch (currentScreen)
         {
@@ -139,12 +159,18 @@ int main(void)
             break;
         case SINGLEPLAYER:
             DrawTexture(singleplayerBackground,0,0,WHITE);
+            DrawTextureEx(questionBox, {(float)(GetScreenWidth() - questionBox.width * 1.9) / 2.0f, 150}, 0, 1.9, WHITE);
+            answerQBtn.DrawButton();
+            answerWBtn.DrawButton();
+            answerEBtn.DrawButton();
+            answerRBtn.DrawButton();
             pauseBtn.DrawButton();
             break;
+        case SETTINGS:
+            DrawTexture(settingsBackground, 0, 0 , WHITE);
+            break;
         case RULES:
-            DrawTexture(rulesBackground, 0, 0, WHITE);
-            DrawTextureEx(rulesTxt, {(float)((GetScreenWidth() - rulesTxt.width * 0.4) / 2), 150}, 0, 0.4, WHITE);
-            DrawTextureEx(rulesBox, {(float)((GetScreenWidth() - rulesBox.width * 0.6) / 2), (float)((GetScreenHeight() - rulesBox.height * 0.6) / 2)}, 0, 0.6, WHITE); 
+            DrawTexture(rulesScreen, 0, 0, WHITE);
             DrawTextHorizontal(arcadeFont, "Press any button to start", 30, 1, WHITE, GetScreenHeight() - 200);
 
             if (timer > inputCooldown) {
@@ -177,9 +203,7 @@ int main(void)
     UnloadTexture(menuBackground);
     UnloadTexture(titleLogo);
     UnloadTexture(pausedTxt);
-    UnloadTexture(rulesBackground);
-    UnloadTexture(rulesBox);
-    UnloadTexture(rulesTxt);
+    UnloadTexture(rulesScreen);
     UnloadTexture(singleplayerBackground);
 
     CloseWindow();  // Close window and OpenGL context
