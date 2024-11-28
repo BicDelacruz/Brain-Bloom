@@ -16,6 +16,9 @@ Button::Button(const char* imagePath, Vector2 imagePosition, float scale)
     texture = LoadTextureFromImage(img);
     imgScale = scale;
     position = imagePosition;
+    
+    width = texture.width;
+    height = texture.height;
 
     UnloadImage(img);
 }

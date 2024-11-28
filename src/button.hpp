@@ -9,8 +9,8 @@ class Button {
         void DrawButtonHorizontal();
         bool isClicked(Vector2 mousePos, bool mousePressed);
         bool isDrawn;
-        float imgScale;
+        float imgScale, width, height;
+        Vector2 position;
     private:
         Texture2D texture;
-        Vector2 position;
 };
