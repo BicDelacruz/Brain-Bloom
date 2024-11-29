@@ -2,7 +2,6 @@
 
 Button::Button(const char* imagePath, Vector2 imagePosition, float scale)
 {
-    isDrawn = false;
     Image img = LoadImage(imagePath);
 
     int origWidth = img.width;
@@ -25,22 +24,17 @@ Button::Button(const char* imagePath, Vector2 imagePosition, float scale)
 
 Button::~Button() {
     UnloadTexture(texture);
-    isDrawn = false;
 }
 
 void Button::DrawButton() {
     DrawTextureV(texture, position, WHITE);
-    isDrawn = true;
 }
 
 void Button::DrawButtonHorizontal() {
-    float centeredX = (GetScreenWidth() - texture.width * imgScale) / 2;
-
-    position.x = centeredX;
+    position.x = (float) (GetScreenWidth() - texture.width * imgScale) / 2;
 
     DrawTextureEx(texture, {position.x, position.y}, 0.0f, imgScale, WHITE);
 
-    isDrawn = true;
 }
 
 bool Button::isClicked(Vector2 mousePos, bool mousePressed)

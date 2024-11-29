@@ -1,18 +1,20 @@
-//#include <iostream>
+/*****************************************************************************
+*   TODO:
+*   Add multiplayer (screen, mechanics, make user input two names, etc)
+*   Complete settings (UI, options for window size, audio)
+*   Implemet highscore (only for singleplayer?) and/or leaderboards (only in multiplayer?)
+*   Cosmetics (cursor skins when player reaches a highscore)
+*   Audio (for buttons and etc.)
+*   Clean code up and remove redundancy
+*****************************************************************************/
+
 #include <vector>
 #include <string>
 #include "raylib.h"
 #include "button.hpp"
 
-// TODO: Delete this line below, textButton.cpp, textButton.hpp if not used in the future
-// #include "textButton.hpp"
-
-// TODO: Add gameover screen, add new rules screen, add multiplyer screen
-
-//using namespace std;
-
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE, GAMEOVER } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE, GAMEOVER, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing, Color fontColor, float posY) {
@@ -105,13 +107,71 @@ void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, 
     DrawTextEx(font, text, (Vector2){textX, textY + 10}, fontSize, spacing, color);
 }
 
-
 // Checks for any key press
 bool IsAnyKeyPressed(void) {
     for (int key = 32; key < 350; key++) { 
         if (IsKeyPressed(key)) return true;        
     }
     return false;
+}
+
+// Generates a random number ensuring it doesn't repeat within the last 'historySize' numbers
+int GetUniqueRandomValue(int min, int max, std::vector<int>& history, size_t historySize) {
+    while (true) {
+        int newRandom = GetRandomValue(min, max);
+
+        // Check if the number exists in the history
+        bool isUnique = true;
+        for (int num : history) {
+            if (num == newRandom) {
+                isUnique = false;
+                break;
+            }
+        }
+
+        // If unique, update history and return the value
+        if (isUnique) {
+            if (history.size() >= historySize) {
+                history.erase(history.begin()); // Remove the oldest number
+            }
+            history.push_back(newRandom); // Add the new number to the history
+            return newRandom;
+        }
+    }
+}
+
+std::vector<int> GetTwoWrongAnswersIndices(int correctAnswerIndex) {
+    std::vector<int> wrongAnswers;
+
+    while (wrongAnswers.size() < 2) {
+        int randomIndex = GetRandomValue(0, 3);
+
+        // Ensure the index is not the correct answer and is not already in the wrongAnswers vector
+        bool isDuplicate = false;
+        for (int answer : wrongAnswers) {
+            if (answer == randomIndex) {
+                isDuplicate = true;
+                break;
+            }
+        }
+        if (randomIndex != correctAnswerIndex && !isDuplicate) {
+            wrongAnswers.push_back(randomIndex);
+        }
+    }
+
+    return wrongAnswers;
+}
+
+int GetOneWrongAnswerIndex(int correctAnswerIndex) {
+    int randomIndex;
+
+    while (true) {
+        randomIndex = GetRandomValue(0, 3);
+        if (randomIndex != correctAnswerIndex) {
+            return randomIndex;
+            break;
+        }
+    }
 }
 
 struct Question {
@@ -137,33 +197,43 @@ int main(void)
     //--------------------------------------------------------------------------------------
     GameScreen currentScreen = MAIN_MENU;
     
-
     int screenWidth = 1920;
     int screenHeight = 1080;
     InitWindow(screenWidth, screenHeight, "BRAIN BLOOM");
 
-    // Game launches at fullscreen, can be changed in the games' settings
+    // Game launches at fullscreen, can be changed in the games' settings, uncomment out when game is finished
     //ToggleFullscreen();                   
     SetExitKey(KEY_NULL);              
     SetTargetFPS(60);
     
-    bool exitPressed = false;
-    bool showCorrectAnswer = false;
+    bool exitConfirmed = false;
+    bool isAnswerCorrect = false;
     bool singlePLayerSelected = false; 
+    bool abilityA_Used = false;
+    bool abilityS_Used = false;
+    bool skipQuestion = false;
+    bool abilityD_Used = false;
+    bool addHealthPoint = false;
+    bool abilityF_Used = false;
 
     // Prevents mouse input when currentScreen transitions to RULES
-    float inputCooldown = 0.2f; // Cooldown time in seconds
+    float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;
+
+    std::vector<int> history;    // To store last 'historySize' generated numbers
+    size_t historySize = 3;    // Change to higher number when questions are done
 
     int countdownTime = 21;
     int seconds = 0;
-    int currentQuestionIndex = 0;
-    int selectedAnswerIndex = 0;
+    int currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+    int selectedAnswerIndex = -1;
     int score = 0;
-    int healthPoints = 5;
+    int healthPoints = 10;
+    int wrongAnswerIndex;
+
+    std::vector<int> wrongAnswersIndices = {-1, -1};  // 2 wrong answers' indices, reset this variabe everytime after its value gets changed
 
     double startTime = GetTime();
-
 
     Font arcadeFont = LoadFont("fonts/arcade.ttf");
 
@@ -173,21 +243,42 @@ int main(void)
     Texture2D settingsBackground = LoadTexture("assets/settings-bg.png");
     Texture2D rulesScreen = LoadTexture("assets/rules-screen.png");
     Texture2D pausedTxt = LoadTexture("assets/game-paused-txt.png");
+    Texture2D exitBackground = LoadTexture("assets/exit-bg.png");
 
     // Singleplayer Textures
     Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
     Texture2D questionBox = LoadTexture("assets/question-box.png");
+    Texture2D health_1 = LoadTexture("assets/health/health_1.png");
+    Texture2D health_2 = LoadTexture("assets/health/health_2.png");
+    Texture2D health_3 = LoadTexture("assets/health/health_3.png");
+    Texture2D health_4 = LoadTexture("assets/health/health_4.png");
+    Texture2D health_5 = LoadTexture("assets/health/health_5.png");
+    Texture2D health_6 = LoadTexture("assets/health/health_6.png");
+    Texture2D health_7 = LoadTexture("assets/health/health_7.png");
+    Texture2D health_8 = LoadTexture("assets/health/health_8.png");
+    Texture2D health_9 = LoadTexture("assets/health/health_9.png");
+    Texture2D health_10 = LoadTexture("assets/health/health_10.png");
+    Texture2D health_11 = LoadTexture("assets/health/health_11.png");
+    Texture2D abilityA_Used_Texture = LoadTexture("assets/ability-a-used.png");
+    Texture2D abilityS_Used_Texture = LoadTexture("assets/ability-s-used.png");
+    Texture2D abilityD_Used_Texture = LoadTexture("assets/ability-d-used.png");
+    Texture2D abilityF_Used_Texture = LoadTexture("assets/ability-f-used.png");
+
+    Texture2D gameoverBackground = LoadTexture("assets/gameover-bg.png");
 
     // Main Menu Buttons
-    Button onePlayerBtn{"assets/one-player-btn.png", {0, 500}, 0.5}; 
-    Button twoPlayerBtn{"assets/two-players-btn.png", {0, 600}, 0.5};
-    Button settingsBtn{"assets/settings-btn.png", {0, 700}, 0.6};
-    Button exitBtn{"assets/exit-btn.png", {0, 800}, 0.6};
+    Button onePlayerBtn{"assets/one-player-btn.png", {0.0f, 500.0f}, 0.5f}; 
+    Button twoPlayerBtn{"assets/two-players-btn.png", {0.0f, 600.0f}, 0.5f};
+    Button settingsBtn{"assets/settings-btn.png", {0.f, 700.0f}, 0.6f};
+    Button exitBtn{"assets/exit-btn.png", {0.0f, 800.0f}, 0.6f};
+    Button yesBtn{"assets/exit-yes-btn.png", {0.0f, 600.0f}, 0.8f};
+    Button noBtn{"assets/exit-no-btn.png", {0.0f, 700.0f}, 0.8f};
 
-    // Pause Buttons
-    Button pauseBtn{"assets/pause-btn.png", {10, 10}, 0.7};
-    Button resumeBtn{"assets/resume-btn.png", {0, 400}, 0.7};
-    Button mainMenuBtn{"assets/main-menu-btn.png", {0, 500}, 0.7};
+    // Pause & Gameover Buttons 
+    Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
+    Button resumeBtn{"assets/resume-btn.png", {0.0f, 400.0f}, 0.7f};
+    Button restartBtn{"assets/restart-btn.png", {0.0f, 600}, 0.75f};
+    Button mainMenuBtn{"assets/main-menu-btn.png", {0.0f, 500.0f}, 0.7f};
 
     // Singlepayer Buttons
     Button answerQ_Btn{"assets/answer-q.png", {150.0f, (float) (GetScreenHeight() - 350.0f)}, 1.3f};
@@ -195,43 +286,64 @@ int main(void)
     Button answerE_Btn{"assets/answer-e.png", {150.0f, (float) (GetScreenHeight() - 200.0f)}, 1.3f};
     Button answerR_Btn{"assets/answer-r.png", {(float) (GetScreenWidth() - 900.0f), (float) (GetScreenHeight() - 200.0f)}, 1.3f};
 
-    Button abilityA_Btn{"assets/skill-a.png", {(float) (GetScreenWidth() - 430.0f), 260.0f}, 0.5f};
-    Button abilityS_Btn{"assets/skill-s.png", {(float) (GetScreenWidth() - 280.0f), 260.0f}, 0.5f};
-    Button abilityD_Btn{"assets/skill-d.png", {(float) (GetScreenWidth() - 430.0f), 420.0f}, 0.53f}; 
-    Button abilityF_Btn{"assets/skill-f.png", {(float) (GetScreenWidth() - 280.0f), 420.9f}, 0.538f};
+    Button abilityA_Btn{"assets/ability-a.png", {(float) (GetScreenWidth() - 430.0f), 260.0f}, 0.5f};
+    Button abilityS_Btn{"assets/ability-s.png", {(float) (GetScreenWidth() - 280.0f), 260.0f}, 0.5f};
+    Button abilityD_Btn{"assets/ability-d.png", {(float) (GetScreenWidth() - 430.0f), 420.0f}, 0.53f}; 
+    Button abilityF_Btn{"assets/ability-f.png", {(float) (GetScreenWidth() - 280.0f), 420.9f}, 0.538f};
 
     Color pauseDark = {0,0,0, 100};
 
     //--------------------------------------------------------------------------------------
 
     // Main game loop
-    while (!WindowShouldClose() && !exitPressed)
+    while (!WindowShouldClose() && !exitConfirmed)
     {  
         float deltaTime = GetFrameTime();
-        timer += deltaTime;
+
+        if (GetTime() - startTime >= 1.0) {
+            countdownTime--;
+            startTime = GetTime();
+        }
+
+        if (countdownTime < 0) countdownTime = 0;
+        
+        seconds = countdownTime % 60;
 
         Vector2 mousePosition = GetMousePosition();
         bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT); 
         
         switch(currentScreen) {
             case MAIN_MENU:
-                countdownTime = 21;    // Reset timer
+                
+                // Reset variables
+                countdownTime = 21;    
+                currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+                isAnswerCorrect = false; 
+                timer = 0.0f;
+                score = 0;
+                healthPoints = 10;
+                wrongAnswersIndices = {-1, -1};
+                wrongAnswerIndex = -1;
+                abilityA_Used = false;
+                abilityS_Used = false;
+                skipQuestion = false;
+                abilityD_Used = false;
+                addHealthPoint = false;
+                abilityF_Used = false;
 
-                if (onePlayerBtn.isDrawn && onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
+                if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
                     singlePLayerSelected = true;
-                    timer = 0.0f;
                 }
-                if (twoPlayerBtn.isDrawn && twoPlayerBtn.isClicked(mousePosition, mouseClicked)) {
+                if (twoPlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
                     singlePLayerSelected = false;
-                    timer = 0.0f;  
                 }
-                if (settingsBtn.isDrawn && settingsBtn.isClicked(mousePosition, mouseClicked)) {
+                if (settingsBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = SETTINGS;
                 }   
-                if (exitBtn.isDrawn && exitBtn.isClicked(mousePosition, mouseClicked)) {
-                    exitPressed = true;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = EXIT;
                 }   
             break;
             case SETTINGS:
@@ -239,58 +351,150 @@ int main(void)
                     currentScreen = MAIN_MENU;
                 }
                 break;
+            case RULES:
+                timer += deltaTime;
+                if (timer > inputCooldown) {
+                    if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                        timer = 0;
+                        currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
+                    } 
+                }
+                break;
             case SINGLEPLAYER:
-                // Timer
-                if (GetTime() - startTime >= 1.0) {
-                    countdownTime--;
-                    startTime = GetTime();
-                }
-
-                if (countdownTime < 0) {
-                    countdownTime = 0;
-                }
-
-                seconds = countdownTime % 60;
-
-                // Answers
-                if (answerQ_Btn.isDrawn && answerQ_Btn.isClicked(mousePosition, mouseClicked)) selectedAnswerIndex = 0;
-                if (answerW_Btn.isDrawn && answerW_Btn.isClicked(mousePosition, mouseClicked)) selectedAnswerIndex = 1;
-                if (answerE_Btn.isDrawn && answerE_Btn.isClicked(mousePosition, mouseClicked)) selectedAnswerIndex = 2;
-                if (answerR_Btn.isDrawn && answerR_Btn.isClicked(mousePosition, mouseClicked)) selectedAnswerIndex = 3;
-
-                if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) score++;
-                if (healthPoints <= 0) currentScreen = GAMEOVER;
-                else healthPoints--;
                 
+                // Answers
+                if (answerQ_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_Q)) selectedAnswerIndex = 0;
+                else if (answerW_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_W)) selectedAnswerIndex = 1;
+                else if (answerE_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_E)) selectedAnswerIndex = 2;
+                else if (answerR_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_R)) selectedAnswerIndex = 3;
+                
+                if (selectedAnswerIndex != -1) {
+                    if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) {
+                            
+                        score++;
+                        isAnswerCorrect = true;
+                        selectedAnswerIndex = -1;
+                        wrongAnswersIndices = {-1, -1};
+                        wrongAnswerIndex = -1;
+
+                    } else {
+                        healthPoints--;
+                        isAnswerCorrect = false;
+                        selectedAnswerIndex = -1;
+                        wrongAnswersIndices = {-1, -1};
+                        wrongAnswerIndex = -1;
+                    }
+                }
+
+                if (seconds == 0) {    // If time runs out:
+                    timer += deltaTime;
+                    // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
+                    if (timer > 1.5f) {
+                        healthPoints--;
+                        countdownTime = 20;    
+                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+                        isAnswerCorrect = false; 
+                        timer = 0.0f;
+                        wrongAnswersIndices = {-1, -1};
+                        wrongAnswerIndex = -1;
+                    }
+                }
+                
+                else if (skipQuestion) {
+                    countdownTime = 20;  
+                    timer += deltaTime;
+                    // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
+                    if (timer > 1.5f) {
+                        score++;
+                        
+                        abilityS_Used = true;                       
+                        skipQuestion = false;
+                        countdownTime = 20;    
+                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+                        isAnswerCorrect = false;
+                        timer = 0.0f;
+
+                        wrongAnswersIndices = {-1, -1};
+                        wrongAnswerIndex = -1; 
+                    }
+                }
+
+                else if (isAnswerCorrect) {    // If answer is correct, resets variables
+                    //Reset timer, incase player corectly answers in the last second, since there is a 1.5s delay to reset variables
+                    countdownTime = 20;  
+                    timer += deltaTime;
+
+
+                    // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
+                    if (timer > 1.5f) {
+                        if (addHealthPoint) healthPoints++;
+                        addHealthPoint = false;
+
+                        countdownTime = 20;    
+                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+                        isAnswerCorrect = false; 
+
+                        timer = 0.0f;
+                        wrongAnswersIndices = {-1, -1};
+                        wrongAnswerIndex = -1;
+                    }
+                }
+
+                if (healthPoints <= 0) currentScreen = GAMEOVER;
+
                 // Pause
-                if (pauseBtn.isDrawn && pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE) ) currentScreen = PAUSE;
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE) ) currentScreen = PAUSE;
 
-                // TODO: Add logic for the skills
-                if (abilityA_Btn.isDrawn && abilityA_Btn.isClicked(mousePosition, mouseClicked)) {
-                    //
+                // Remove 2 wrong answers
+                if ((!abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityA_Used && IsKeyPressed(KEY_A))) {
+                    wrongAnswersIndices = GetTwoWrongAnswersIndices(questions[currentQuestionIndex].correctAnswerIndex);
+                    abilityA_Used = true;
                 }
-                if (abilityS_Btn.isDrawn && abilityS_Btn.isClicked(mousePosition, mouseClicked)) {
-                    //
+                // Skip question
+                if ((!abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityS_Used && IsKeyPressed(KEY_S))) {
+                    timer += deltaTime;
+                    skipQuestion = true; 
+                    abilityS_Used = true;
                 }
-                if (abilityD_Btn.isDrawn && abilityD_Btn.isClicked(mousePosition, mouseClicked)) {
-                    //
+                // Gain 1 health point if question is answered correctly
+                if ((!abilityD_Used && abilityD_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityD_Used && IsKeyPressed(KEY_D))) {
+                    addHealthPoint = true;
+                    abilityD_Used = true;
                 }
-                if (abilityF_Btn.isDrawn && abilityF_Btn.isClicked(mousePosition, mouseClicked)) {
-                    //
+                // Remove 1 wrong option
+                if ((!abilityF_Used && abilityF_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityF_Used && IsKeyPressed(KEY_F))) {
+                    wrongAnswerIndex = GetOneWrongAnswerIndex(questions[currentQuestionIndex].correctAnswerIndex);
+                    abilityF_Used = true;
                 }
-
-            break;
+                break;
             case PAUSE:
-                if (resumeBtn.isDrawn && resumeBtn.isClicked(mousePosition, mouseClicked) ) {
-                    currentScreen = SINGLEPLAYER;
-                }
-                if (mainMenuBtn.isDrawn && mainMenuBtn.isClicked(mousePosition, mouseClicked) ) {
-                    currentScreen = MAIN_MENU;
-                }
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                    currentScreen = SINGLEPLAYER;
-                }
-            break;
+                if (resumeBtn.isClicked(mousePosition, mouseClicked) ) currentScreen = SINGLEPLAYER;
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked) ) currentScreen = MAIN_MENU;
+                if (IsKeyPressed(KEY_ESCAPE)) currentScreen = SINGLEPLAYER;
+                break;
+            case EXIT:
+                if (yesBtn.isClicked(mousePosition, mouseClicked)) exitConfirmed = true;
+                if (noBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                break;
+            case GAMEOVER:
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
+                    countdownTime = 21;    
+                    currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+                    isAnswerCorrect = false; 
+                    timer = 0.0f;
+                    score = 0;
+                    healthPoints = 10;
+                    wrongAnswersIndices = {-1, -1};
+                    wrongAnswerIndex = -1;
+                    abilityA_Used = false;
+                    abilityS_Used = false;
+                    skipQuestion = false;
+                    abilityD_Used = false;
+                    addHealthPoint = false;
+                    abilityF_Used = false;
+                    currentScreen = RULES;   
+                } 
             default:
                 break;
         }
@@ -321,20 +525,61 @@ int main(void)
             answerW_Btn.DrawButton();
             answerE_Btn.DrawButton();
             answerR_Btn.DrawButton();
-
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25, 1, BLACK, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25, 1, BLACK, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25, 1, BLACK, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25, 1, BLACK, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height);
+            
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height);
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height);
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height);
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height);
 
             // Draw Timer
-            DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50, 1, BLACK, 100);
+            if (seconds == 0) {
+                DrawTextHorizontal(arcadeFont, "Times Up!", 50.0f, 1.0f, RED, 100.0f);  
+            }
+            else if (skipQuestion) {
+                DrawTextHorizontal(arcadeFont, "Skip!", 50.0f, 1.0f, ORANGE, 100.0f);  
+            }
+            else if (!isAnswerCorrect && seconds != 0) {
+                DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50.0f, 1.0f, BLACK, 100.0f);
+            } 
+            else {
+                DrawTextHorizontal(arcadeFont, "Correct!", 50.0f, 1.0f, LIME, 100.0f);
+            }
 
-            // Draw Skill
-            abilityA_Btn.DrawButton();
-            abilityS_Btn.DrawButton();
-            abilityD_Btn.DrawButton();
-            abilityF_Btn.DrawButton();
+            if (addHealthPoint) {
+                DrawTextHorizontal(arcadeFont, "Answer correctly to gain health!", 20.0f, 1.0f, BLACK, 170.0f);
+            }
+            
+            // Draw Score
+            DrawTextEx(arcadeFont, TextFormat("Score: %i", score), {100.0f, 350.0f}, 30.0f, 1.0f, BLACK);
+
+            // Draw Health
+            DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, BLACK);
+            if (healthPoints == 11) DrawTextureEx(health_11, {100.0f, 450.0f}, 0.0f, 0.5f, WHITE);
+            if (healthPoints == 10) DrawTextureEx(health_10, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 9) DrawTextureEx(health_9, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 8) DrawTextureEx(health_8, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 7) DrawTextureEx(health_7, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 6) DrawTextureEx(health_6, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 5) DrawTextureEx(health_5, {100.0f, 450.0f}, 0.0f, 0.18f, WHITE);
+            if (healthPoints == 4) DrawTextureEx(health_4, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 3) DrawTextureEx(health_3, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 2) DrawTextureEx(health_2, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (healthPoints == 1) DrawTextureEx(health_1, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+
+            // Draw Abilities
+            if (abilityA_Used) DrawTextureEx(abilityA_Used_Texture, {abilityA_Btn.position.x, abilityA_Btn.position.y}, 0, abilityA_Btn.imgScale, WHITE);
+            else abilityA_Btn.DrawButton();
+
+            if (abilityS_Used) DrawTextureEx(abilityS_Used_Texture, {abilityS_Btn.position.x, abilityS_Btn.position.y}, 0, abilityS_Btn.imgScale, WHITE);
+            else abilityS_Btn.DrawButton();
+
+            if (abilityD_Used) DrawTextureEx(abilityD_Used_Texture, {abilityD_Btn.position.x, abilityD_Btn.position.y}, 0, abilityD_Btn.imgScale, WHITE);
+            else abilityD_Btn.DrawButton();
+
+            if (abilityF_Used) DrawTextureEx(abilityF_Used_Texture, {abilityF_Btn.position.x, abilityF_Btn.position.y}, 0, abilityF_Btn.imgScale, WHITE);
+            else abilityF_Btn.DrawButton();
+
+
             pauseBtn.DrawButton();
             break;
         case SETTINGS:
@@ -343,18 +588,22 @@ int main(void)
         case RULES:
             DrawTexture(rulesScreen, 0, 0, WHITE);
             DrawTextHorizontal(arcadeFont, "Press any button to start", 30, 1, WHITE, GetScreenHeight() - 200);
-
-            if (timer > inputCooldown) {
-                if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT))  {
-                    currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
-                }
-            }
             break;
         case PAUSE:
-            DrawTexture(singleplayerBackground,0,0,WHITE);
+            DrawTexture(singleplayerBackground, 0, 0,WHITE);
             DrawRectangle(0,0,GetScreenWidth(),GetScreenHeight(), pauseDark);
             DrawTexture(pausedTxt, ((GetScreenWidth() - pausedTxt.width) / 2), 150, WHITE); 
             resumeBtn.DrawButtonHorizontal();
+            mainMenuBtn.DrawButtonHorizontal();
+            break;
+        case EXIT:
+            DrawTexture(exitBackground, 0, 0, WHITE);
+            yesBtn.DrawButtonHorizontal();
+            noBtn.DrawButtonHorizontal();
+            break;
+        case GAMEOVER:
+            DrawTexture(gameoverBackground, 0, 0, WHITE);
+            restartBtn.DrawButtonHorizontal();
             mainMenuBtn.DrawButtonHorizontal();
             break;
         default:
@@ -378,7 +627,21 @@ int main(void)
     UnloadTexture(singleplayerBackground);
     UnloadTexture(settingsBackground);
     UnloadTexture(questionBox);
-
+    UnloadTexture(exitBackground);
+    UnloadTexture(health_1);
+    UnloadTexture(health_2);
+    UnloadTexture(health_3);
+    UnloadTexture(health_4);
+    UnloadTexture(health_5);
+    UnloadTexture(health_6);
+    UnloadTexture(health_7);
+    UnloadTexture(health_8);
+    UnloadTexture(health_9);
+    UnloadTexture(health_10);
+    UnloadTexture(abilityA_Used_Texture);
+    UnloadTexture(abilityS_Used_Texture);
+    UnloadTexture(abilityD_Used_Texture);
+    UnloadTexture(abilityF_Used_Texture);
 
     CloseWindow();  // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
