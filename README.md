@@ -6,9 +6,10 @@ https://www.raylib.com/
 
 1. Download as zip
 2. Extract and open "main.code-workspace" file
-3. Once in visual studio code, hit ctrl + f5 to run game
+3. Once in visual studio code, hit ctrl + f5 to run game 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Pre-Alpha: 
 
 25/11/2024:
 - Project published in GitHub
