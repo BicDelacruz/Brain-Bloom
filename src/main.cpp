@@ -377,7 +377,8 @@ int main(void)
             case RULES:
                 timer += deltaTime;
                 if (timer > inputCooldown) {
-                    if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                    if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
+                    else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
                         timer = 0;
                         currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
                     } 
@@ -401,7 +402,7 @@ int main(void)
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Wrong = true;
                 }
-                else if (enableInput && answerR_Btn.isClicked(mousePosition, mouseClicked) || (enableInput && IsKeyPressed(KEY_R))) {
+                else if ((enableInput && answerR_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_R))) {
                     selectedAnswerIndex = 3;
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Wrong = true;
@@ -445,8 +446,8 @@ int main(void)
                     enableInput = false;
 
                     if (skipQuestion) {
-                            score++;
-                            abilityS_Used = true;                       
+                        score++;
+                        abilityS_Used = true;                       
                     }
                     
                     // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
@@ -523,6 +524,7 @@ int main(void)
                     timer = 0.0f;
                     score = 0;
                     healthPoints = 10;
+
                     wrongAnswersIndices = {-1, -1};
                     wrongAnswerIndex = -1;
                     abilityA_Used = false;
@@ -531,6 +533,7 @@ int main(void)
                     abilityD_Used = false;
                     addHealthPoint = false;
                     abilityF_Used = false;
+
                     isAnswerQ_Correct = false;
                     isAnswerW_Correct = false;
                     isAnswerE_Correct = false;

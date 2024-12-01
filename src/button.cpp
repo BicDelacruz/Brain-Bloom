@@ -38,10 +38,10 @@ void Button::DrawButtonHorizontal() {
 bool Button::isClicked(Vector2 mousePos, bool mousePressed)
 {
     Rectangle buttonRect = { 
-        position.x, 
-        position.y, 
-        (float)texture.width * imgScale, 
-        (float)texture.height * imgScale 
+        (float) position.x, 
+        (float) position.y, 
+        (float) texture.width, 
+        (float) texture.height  
     };
 
     return mousePressed && CheckCollisionPointRec(mousePos, buttonRect);
