@@ -125,7 +125,6 @@ void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, 
     }
 }
 
-
 // Checks for any key press
 bool IsAnyKeyPressed(void) {
     for (int key = 32; key < 350; key++) { 
@@ -337,6 +336,7 @@ int main(void)
                 timer = 0.0f;
                 score = 0;
                 healthPoints = 10;
+
                 wrongAnswersIndices = {-1, -1};
                 wrongAnswerIndex = -1;
                 abilityA_Used = false;
@@ -345,6 +345,7 @@ int main(void)
                 abilityD_Used = false;
                 addHealthPoint = false;
                 abilityF_Used = false;
+
                 isAnswerQ_Correct = false;
                 isAnswerW_Correct = false;
                 isAnswerE_Correct = false;
@@ -444,17 +445,17 @@ int main(void)
                     countdownTime = 20;  
                     timer += deltaTime;
                     enableInput = false;
-
-                    if (skipQuestion) {
-                        score++;
-                        abilityS_Used = true;                       
-                    }
                     
                     // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         if (addHealthPoint) healthPoints++;
                         addHealthPoint = false;
     
+                        if (skipQuestion) {
+                            score++;
+                            abilityS_Used = true;                       
+                        }
+
                         skipQuestion = false;
 
                         countdownTime = 20;    
