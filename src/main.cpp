@@ -445,17 +445,17 @@ int main(void)
                     countdownTime = 20;  
                     timer += deltaTime;
                     enableInput = false;
-
-                    if (skipQuestion) {
-                        score++;
-                        abilityS_Used = true;                       
-                    }
                     
                     // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         if (addHealthPoint) healthPoints++;
                         addHealthPoint = false;
     
+                        if (skipQuestion) {
+                            score++;
+                            abilityS_Used = true;                       
+                        }
+
                         skipQuestion = false;
 
                         countdownTime = 20;    
