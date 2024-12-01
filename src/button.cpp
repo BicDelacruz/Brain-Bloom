@@ -32,9 +32,7 @@ void Button::DrawButton() {
 
 void Button::DrawButtonHorizontal() {
     position.x = (float) (GetScreenWidth() - texture.width * imgScale) / 2;
-
     DrawTextureEx(texture, {position.x, position.y}, 0.0f, imgScale, WHITE);
-
 }
 
 bool Button::isClicked(Vector2 mousePos, bool mousePressed)
@@ -42,8 +40,8 @@ bool Button::isClicked(Vector2 mousePos, bool mousePressed)
     Rectangle buttonRect = { 
         position.x, 
         position.y, 
-        texture.width * imgScale, 
-        texture.height * imgScale 
+        (float)texture.width * imgScale, 
+        (float)texture.height * imgScale 
     };
 
     return mousePressed && CheckCollisionPointRec(mousePos, buttonRect);

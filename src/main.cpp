@@ -1,23 +1,29 @@
 /*****************************************************************************
 *   TODO:
 *   Add multiplayer (screen, mechanics, make user input two names, etc)
+*   Add "are you ready" screen
+*   Add main menu background animation
+*   Change timer font
 *   Complete settings (UI, options for window size, audio)
 *   Implemet highscore (only for singleplayer?) and/or leaderboards (only in multiplayer?)
 *   Cosmetics (cursor skins when player reaches a highscore)
 *   Audio (for buttons and etc.)
-*   Clean code up and remove redundancy
+*   Implement loading screen
+*   Clean code up and remove redundancy (make variables global)
 *****************************************************************************/
 
 #include <vector>
 #include <string>
 #include "raylib.h"
 #include "button.hpp"
+#include "questions.hpp"
 
 // Screen manager, based on an example from the raylib website
 typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE, GAMEOVER, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
-void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing, Color fontColor, float posY) {
+void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing,
+                         Color fontColor, float posY) {
     Vector2 textSize = MeasureTextEx(font, text, fontSize, fontSpacing);
     DrawTextEx(font, text, {(float)(GetScreenWidth() - textSize.x) / 2.0f, posY}, fontSize, fontSpacing, fontColor);
 }
@@ -75,7 +81,8 @@ std::vector<std::string> WrapText(Font font, const char* text, int maxWidth, int
 }
 
 // Draw wrapped text centered both vertically and horizontally
-void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth, int screenHeight, int fontSize, Color color) {
+void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth, int screenHeight,
+                      int fontSize, Color color) {
     // Get wrapped lines
     std::vector<std::string> lines = WrapText(font, text, maxWidth, fontSize);
 
@@ -93,19 +100,31 @@ void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth
 }
 
 // Draw and center text for the answer buttons based on the buttons' dimensions
-void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, Color color, float buttonX, float buttonY, float buttonWidth, float buttonHeight) {
-    // Get the text dimensions using MeasureTextEx
-    Vector2 textSize = MeasureTextEx(font, text, fontSize, spacing); 
-    int textWidth = textSize.x;
-    int textHeight = textSize.y;
+void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, Color color, 
+                    float buttonX, float buttonY, float buttonWidth, float buttonHeight, int maxWidth) {
+    // Wrap the text into multiple lines
+    std::vector<std::string> lines = WrapText(font, text, maxWidth, fontSize);
 
-    // Calculate text position for centering
-    float textX = buttonX + (buttonWidth - textWidth) / 2;
-    float textY = buttonY + (buttonHeight - textHeight) / 2;
+    // Calculate total height of wrapped text for vertical centering
+    float totalHeight = lines.size() * fontSize;
 
-    // Draw the text centered in the button
-    DrawTextEx(font, text, (Vector2){textX, textY + 10}, fontSize, spacing, color);
+    // Starting Y position to vertically center the text within the button
+    float startY = buttonY + (buttonHeight - totalHeight) / 2;
+
+    // Loop through the wrapped lines and draw them
+    for (const std::string &line : lines) {
+        // Measure line width and calculate X position for horizontal centering
+        float lineWidth = MeasureTextEx(font, line.c_str(), fontSize, spacing).x;
+        float lineX = buttonX + (buttonWidth - lineWidth) / 2;
+
+        // Draw the line at the calculated position
+        DrawTextEx(font, line.c_str(), (Vector2){lineX, startY + 10}, fontSize, spacing, color);
+
+        // Move to the next line's Y position
+        startY += fontSize;
+    }
 }
+
 
 // Checks for any key press
 bool IsAnyKeyPressed(void) {
@@ -174,20 +193,6 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
-struct Question {
-    std::string questionText;
-    std::vector<std::string> answers;
-    int correctAnswerIndex;
-};
-
-std::vector<Question> questions = {
-    {"What is the capital of France?", {"Paris", "London", "Berlin", "Madrid"}, 0},
-    {"What is 2 + 2?", {"3", "4", "5", "6"}, 1},
-    {"Which planet is known as the Red Planet?", {"Venus", "Saturn", "Mars", "Mercury"}, 2},
-    {"Which element is known as the building block of life?", {"Oxygen", "Carbon", "Hydrogen", "Nitrogen"}, 1},
-    {"Which is the fastest bird in the world?",  {"Bald Eagle", "Peregrine Falcon", "Hummingbird", "Raven"}, 1}
-};
-
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -209,19 +214,29 @@ int main(void)
     bool exitConfirmed = false;
     bool isAnswerCorrect = false;
     bool singlePLayerSelected = false; 
+    bool enableInput = true;
     bool abilityA_Used = false;
     bool abilityS_Used = false;
     bool skipQuestion = false;
     bool abilityD_Used = false;
     bool addHealthPoint = false;
     bool abilityF_Used = false;
+    bool isAnswerQ_Correct = false;
+    bool isAnswerW_Correct = false;
+    bool isAnswerE_Correct = false;
+    bool isAnswerR_Correct = false;
+    bool isAnswerQ_Wrong = false;
+    bool isAnswerW_Wrong = false;
+    bool isAnswerE_Wrong = false;
+    bool isAnswerR_Wrong = false;
 
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;
 
+    std::vector<Question> questions = GetQuestionsVector();
     std::vector<int> history;    // To store last 'historySize' generated numbers
-    size_t historySize = 3;    // Change to higher number when questions are done
+    size_t historySize = 10;    
 
     int countdownTime = 21;
     int seconds = 0;
@@ -330,6 +345,14 @@ int main(void)
                 abilityD_Used = false;
                 addHealthPoint = false;
                 abilityF_Used = false;
+                isAnswerQ_Correct = false;
+                isAnswerW_Correct = false;
+                isAnswerE_Correct = false;
+                isAnswerR_Correct = false;
+                isAnswerQ_Wrong = false;
+                isAnswerW_Wrong = false;
+                isAnswerE_Wrong = false;
+                isAnswerR_Wrong = false;
 
                 if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
@@ -363,31 +386,42 @@ int main(void)
             case SINGLEPLAYER:
                 
                 // Answers
-                if (answerQ_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_Q)) selectedAnswerIndex = 0;
-                else if (answerW_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_W)) selectedAnswerIndex = 1;
-                else if (answerE_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_E)) selectedAnswerIndex = 2;
-                else if (answerR_Btn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_R)) selectedAnswerIndex = 3;
+                if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
+                    selectedAnswerIndex = 0;
+                    if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerQ_Correct = true;
+                    if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerQ_Wrong = true;
+                } 
+                else if ((enableInput && answerW_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_W))) {
+                    selectedAnswerIndex = 1;
+                    if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerW_Correct = true;
+                    if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerW_Wrong = true;
+                }
+                else if ((enableInput && answerE_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_E))) {
+                    selectedAnswerIndex = 2;
+                    if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Correct = true;
+                    if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Wrong = true;
+                }
+                else if (enableInput && answerR_Btn.isClicked(mousePosition, mouseClicked) || (enableInput && IsKeyPressed(KEY_R))) {
+                    selectedAnswerIndex = 3;
+                    if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Correct = true;
+                    if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Wrong = true;
+                }
                 
                 if (selectedAnswerIndex != -1) {
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) {
-                            
-                        score++;
                         isAnswerCorrect = true;
+                        score++;
                         selectedAnswerIndex = -1;
-                        wrongAnswersIndices = {-1, -1};
-                        wrongAnswerIndex = -1;
-
                     } else {
-                        healthPoints--;
                         isAnswerCorrect = false;
+                        healthPoints--;
                         selectedAnswerIndex = -1;
-                        wrongAnswersIndices = {-1, -1};
-                        wrongAnswerIndex = -1;
                     }
                 }
 
                 if (seconds == 0) {    // If time runs out:
                     timer += deltaTime;
+                    selectedAnswerIndex = -1;
                     // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         healthPoints--;
@@ -396,39 +430,31 @@ int main(void)
                         isAnswerCorrect = false; 
                         timer = 0.0f;
                         wrongAnswersIndices = {-1, -1};
-                        wrongAnswerIndex = -1;
-                    }
-                }
-                
-                else if (skipQuestion) {
-                    countdownTime = 20;  
-                    timer += deltaTime;
-                    // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
-                    if (timer > 1.5f) {
-                        score++;
-                        
-                        abilityS_Used = true;                       
-                        skipQuestion = false;
-                        countdownTime = 20;    
-                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
-                        isAnswerCorrect = false;
-                        timer = 0.0f;
 
-                        wrongAnswersIndices = {-1, -1};
-                        wrongAnswerIndex = -1; 
+                        isAnswerQ_Correct = false;
+                        isAnswerW_Correct = false;
+                        isAnswerE_Correct = false;
+                        isAnswerR_Correct = false;
                     }
                 }
 
-                else if (isAnswerCorrect) {    // If answer is correct, resets variables
+                else if (isAnswerCorrect || skipQuestion) {    // If answer is correct, resets variables
                     //Reset timer, incase player corectly answers in the last second, since there is a 1.5s delay to reset variables
                     countdownTime = 20;  
                     timer += deltaTime;
+                    enableInput = false;
 
-
+                    if (skipQuestion) {
+                            score++;
+                            abilityS_Used = true;                       
+                    }
+                    
                     // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         if (addHealthPoint) healthPoints++;
                         addHealthPoint = false;
+    
+                        skipQuestion = false;
 
                         countdownTime = 20;    
                         currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
@@ -437,6 +463,18 @@ int main(void)
                         timer = 0.0f;
                         wrongAnswersIndices = {-1, -1};
                         wrongAnswerIndex = -1;
+
+                        isAnswerQ_Correct = false;
+                        isAnswerW_Correct = false;
+                        isAnswerE_Correct = false;
+                        isAnswerR_Correct = false;
+
+                        isAnswerQ_Wrong = false;
+                        isAnswerW_Wrong = false;
+                        isAnswerE_Wrong = false;
+                        isAnswerR_Wrong = false;
+                        
+                        enableInput = true;
                     }
                 }
 
@@ -493,6 +531,14 @@ int main(void)
                     abilityD_Used = false;
                     addHealthPoint = false;
                     abilityF_Used = false;
+                    isAnswerQ_Correct = false;
+                    isAnswerW_Correct = false;
+                    isAnswerE_Correct = false;
+                    isAnswerR_Correct = false;
+                    isAnswerQ_Wrong = false;
+                    isAnswerW_Wrong = false;
+                    isAnswerE_Wrong = false;
+                    isAnswerR_Wrong = false;
                     currentScreen = RULES;   
                 } 
             default:
@@ -526,10 +572,18 @@ int main(void)
             answerE_Btn.DrawButton();
             answerR_Btn.DrawButton();
             
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height);
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height);
+            // Draw Answers/Choices.
+            if (isAnswerQ_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0 && !isAnswerQ_Wrong) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600); 
+            
+            if (isAnswerW_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1 && !isAnswerW_Wrong) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600);
+
+            if (isAnswerE_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2 && !isAnswerE_Wrong) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600);
+
+            if (isAnswerR_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3 && !isAnswerR_Wrong) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600);
 
             // Draw Timer
             if (seconds == 0) {
