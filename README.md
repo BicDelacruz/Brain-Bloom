@@ -22,6 +22,8 @@ Pre-Alpha:
 - Implemented "abilities" for player to use
 - Gameover screen completed
 - Multiplayer to be added
-
+- Adding multiplayer in here now
+- Extracting multiplayer screen and player names
+- Changing the main screen
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")
