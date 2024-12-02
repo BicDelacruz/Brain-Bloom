@@ -25,7 +25,7 @@ std::vector<Question> questions = {
     {"What type of reproduction involves only one parent?", {"Sexual reproduction", "Asexual reproduction", "Binary fission", "Fertilization"}, 1},
     {"What is the process by which cells divide to form two identical daughter cells?", {"Meiosis", "Mitosis", "Binary fission", "Replication"}, 1},
     {"Which organelle is responsible for photosynthesis?", {"Mitochondria", "Chloroplast", "Ribosome", "Nucleus"}, 1},
-    {"What is the term for a change in an organism’s DNA?", {"Mutation", "Replication", "Transcription", "Translation"}, 0},
+    {"What is the term for a change in an organism's DNA?", {"Mutation", "Replication", "Transcription", "Translation"}, 0},
     {"What is the process by which water moves across a selectively permeable membrane?", {"Diffusion", "Osmosis", "Active transport", "Endocytosis"}, 1},
     {"What type of bond holds the two strands of DNA together?", {"Covalent bond", "Ionic bond", "Hydrogen bond", "Peptide bond"}, 2},
     {"What is the term for organisms that break down dead matter?", {"Producers", "Consumers", "Decomposers", "Autotrophs"}, 2},

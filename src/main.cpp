@@ -1,7 +1,6 @@
 /*****************************************************************************
 *   TODO:
 *   Add multiplayer (screen, mechanics, make user input two names, etc)
-*   Add "are you ready" screen
 *   Add main menu background animation
 *   Change timer font
 *   Complete settings (UI, options for window size, audio)
@@ -19,7 +18,7 @@
 #include "questions.hpp"
 
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, PAUSE, GAMEOVER, EXIT } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing,
@@ -231,7 +230,7 @@ int main(void)
 
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
-    float timer = 0.0f;
+    float timer = 0.0f;           // Reset to 0.0f ater each use
 
     std::vector<Question> questions = GetQuestionsVector();
     std::vector<int> history;    // To store last 'historySize' generated numbers
@@ -258,6 +257,7 @@ int main(void)
     Texture2D rulesScreen = LoadTexture("assets/rules-screen.png");
     Texture2D pausedTxt = LoadTexture("assets/game-paused-txt.png");
     Texture2D exitBackground = LoadTexture("assets/exit-bg.png");
+    Texture2D readyScreen = LoadTexture("assets/ready-screen.png");
 
     // Singleplayer Textures
     Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
@@ -355,6 +355,9 @@ int main(void)
                 isAnswerE_Wrong = false;
                 isAnswerR_Wrong = false;
 
+                exitBtn.imgScale = 0.6f;
+                exitBtn.position.y = 800.0f;
+
                 if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
                     singlePLayerSelected = true;
@@ -363,12 +366,8 @@ int main(void)
                     currentScreen = RULES;
                     singlePLayerSelected = false;
                 }
-                if (settingsBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = SETTINGS;
-                }   
-                if (exitBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = EXIT;
-                }   
+                if (settingsBtn.isClicked(mousePosition, mouseClicked)) currentScreen = SETTINGS;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;   
             break;
             case SETTINGS:
                 if (IsKeyPressed(KEY_ESCAPE)) {
@@ -377,12 +376,21 @@ int main(void)
                 break;
             case RULES:
                 timer += deltaTime;
+                countdownTime = 3;
                 if (timer > inputCooldown) {
                     if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
                     else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
                         timer = 0;
-                        currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
+                        currentScreen = READY;
                     } 
+                }
+                break;
+            case READY:
+                timer += deltaTime;
+                if (timer >= 3.0f) {
+                    currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
+                    countdownTime = 20;
+                    timer = 0.f;
                 }
                 break;
             case SINGLEPLAYER:
@@ -424,6 +432,8 @@ int main(void)
                 if (seconds == 0) {    // If time runs out:
                     timer += deltaTime;
                     selectedAnswerIndex = -1;
+                    enableInput = false;
+
                     // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         healthPoints--;
@@ -437,6 +447,13 @@ int main(void)
                         isAnswerW_Correct = false;
                         isAnswerE_Correct = false;
                         isAnswerR_Correct = false;
+
+                        isAnswerQ_Wrong = false;
+                        isAnswerW_Wrong = false;
+                        isAnswerE_Wrong = false;
+                        isAnswerR_Wrong = false;
+                        
+                        enableInput = true;
                     }
                 }
 
@@ -492,7 +509,6 @@ int main(void)
                 }
                 // Skip question
                 if ((!abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityS_Used && IsKeyPressed(KEY_S))) {
-                    timer += deltaTime;
                     skipQuestion = true; 
                     abilityS_Used = true;
                 }
@@ -518,6 +534,7 @@ int main(void)
                 break;
             case GAMEOVER:
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     countdownTime = 21;    
                     currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
@@ -543,6 +560,7 @@ int main(void)
                     isAnswerW_Wrong = false;
                     isAnswerE_Wrong = false;
                     isAnswerR_Wrong = false;
+
                     currentScreen = RULES;   
                 } 
             default:
@@ -640,8 +658,16 @@ int main(void)
 
             pauseBtn.DrawButton();
             break;
+        case MULTIPLAYER:
+            //
+            break;
         case SETTINGS:
             DrawTexture(settingsBackground, 0, 0 , WHITE);
+            break;
+        case READY:
+            DrawTexture(readyScreen, 0, 0, WHITE);
+            if (seconds > 0) DrawTextHorizontal(arcadeFont, TextFormat("in %i", seconds), 70.0f, 1.0f, WHITE, GetScreenHeight() - 200.0f);
+            else DrawTextHorizontal(arcadeFont, "Go!", 80.0f, 1.0f, GREEN, GetScreenHeight() - 200.0f);
             break;
         case RULES:
             DrawTexture(rulesScreen, 0, 0, WHITE);
@@ -662,6 +688,9 @@ int main(void)
         case GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
             restartBtn.DrawButtonHorizontal();
+            exitBtn.DrawButtonHorizontal();
+            exitBtn.imgScale = 0.53f;
+            exitBtn.position.y = 700.0f;
             mainMenuBtn.DrawButtonHorizontal();
             break;
         default:
@@ -686,6 +715,8 @@ int main(void)
     UnloadTexture(settingsBackground);
     UnloadTexture(questionBox);
     UnloadTexture(exitBackground);
+    UnloadTexture(readyScreen);
+    UnloadTexture(gameoverBackground);
     UnloadTexture(health_1);
     UnloadTexture(health_2);
     UnloadTexture(health_3);
