@@ -25,5 +25,6 @@ Pre-Alpha:
 - Adding multiplayer in here now
 - Extracting multiplayer screen and player names
 - Changing the main screen
+- Main screen added
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")
