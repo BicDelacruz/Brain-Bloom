@@ -22,6 +22,7 @@ Pre-Alpha:
 - Implemented "abilities" for player to use
 - Gameover screen completed
 - Multiplayer to be added
+- Adding multiplaye now
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")
