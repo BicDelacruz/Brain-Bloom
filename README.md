@@ -24,8 +24,6 @@ Pre-Alpha:
 - Multiplayer to be added
 - Adding multiplayer in here now
 - Extracting multiplayer screen and player names
-- Main screen added
-- Multiplaye added
 
 1/12/2024:
 - Main screen added
