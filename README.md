@@ -21,7 +21,9 @@ Pre-Alpha:
 - Singleplayer finally completed
 - Implemented "abilities" for player to use
 - Gameover screen completed
-- Multiplayer to be added
+- Multiplayer to be addded
+- Adding multiplayer in here now
+- Extracting multiplayer screen and player names
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")
