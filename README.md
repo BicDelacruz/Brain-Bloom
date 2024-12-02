@@ -29,5 +29,6 @@ Pre-Alpha:
 - Main screen added
 - Multiplayer screen added
 - Player input name added
+- Adding question and answer to multiplayer
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")

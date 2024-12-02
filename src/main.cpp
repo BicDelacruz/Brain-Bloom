@@ -98,6 +98,19 @@ void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth
     }
 }
 
+//Re-center Player name input in a fixed x and y coordinates base on its with size and length
+void DrawCenteredTextAtX(const char* text, Font font, float x, float y, int minFontSize, int maxFontSize, float maxWidth, Color color) {
+    int fontSize = maxFontSize;
+    Vector2 textSize = MeasureTextEx(font, text, fontSize, 1);
+
+    while (textSize.x > maxWidth && fontSize > minFontSize) {
+        fontSize--;
+        textSize = MeasureTextEx(font, text, fontSize, 1);
+    }
+
+    DrawTextEx(font, text, (Vector2){x - textSize.x / 2, y - textSize.y / 2}, fontSize, 1, color);
+}
+
 // Draw and center text for the answer buttons based on the buttons' dimensions
 void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, Color color, 
                     float buttonX, float buttonY, float buttonWidth, float buttonHeight, int maxWidth) {
@@ -459,10 +472,10 @@ int main(void)
                     }
                     int key = GetCharPressed();
                     while (key > 0) {
-                        if (enteringPlayer1Name && player1Name.size() < 20) {
+                        if (enteringPlayer1Name && player1Name.size() < 11) {
                             player1Name += static_cast<char>(key);
                         }
-                        if (enteringPlayer2Name && player2Name.size() < 20) {
+                        if (enteringPlayer2Name && player2Name.size() < 11) {
                             player2Name += static_cast<char>(key);
                         }
                         key = GetCharPressed();
@@ -798,18 +811,18 @@ int main(void)
             for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
             DrawTextEx(arcadeFont, "Player 2", (Vector2){1610 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
             DrawTextEx(arcadeFont, "Player 2", (Vector2){1610, 240}, 20, 0.50, BLACK);
-             //Player1 input name
+            //Player1 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){140 + (float)x, 170 + (float)y}, 50, 1, ORANGE);}}}
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){140, 170}, 50, 1, BLACK);
+            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);}}}
+            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212, 190, 10, 40, screenWidth * 0.8f, BLACK);
             //Player2 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1610 + (float)x, 170 + (float)y}, 50, 1, PURPLE);}}}
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1610, 170}, 50, 1, BLACK);
+            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);}}}
+            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690, 190, 10, 40, screenWidth * 0.8f, BLACK);
         
             // Draw Score
             for (int x = -2; x <= 2; x++) {
