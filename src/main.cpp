@@ -18,7 +18,7 @@
 #include "questions.hpp"
 
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, SETTINGS, RULES, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, EXIT } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, CONTROLS1, PLAYERNAME, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing,
@@ -191,6 +191,14 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
+//For Multiplayer name input
+std::string player1Name = "";
+std::string player2Name = "";
+bool enteringPlayer1Name = false;
+bool enteringPlayer2Name = false;
+bool namesEntered = false;
+
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -199,6 +207,7 @@ int main(void)
     // Initialization
     //--------------------------------------------------------------------------------------
     GameScreen currentScreen = MAIN_MENU;
+    GameScreen previousScreen = MAIN_MENU;
     
     int screenWidth = 1920;
     int screenHeight = 1080;
@@ -255,7 +264,10 @@ int main(void)
     Texture2D menuBackground = LoadTexture("assets/main-menu-bg.png");
     Texture2D settingsBackground = LoadTexture("assets/settings-bg.png");
     Texture2D rulesScreen = LoadTexture("assets/rules-screen.png");
+    Texture2D rulesScreen1 = LoadTexture("assets/rules-screen1.png");
     Texture2D pausedTxt = LoadTexture("assets/game-paused-txt.png");
+    Texture2D fiveHearts = LoadTexture("assets/five-hearts.png");
+    Texture2D startGameBackground = LoadTexture("assets/start-game-bg.png");
     Texture2D exitBackground = LoadTexture("assets/exit-bg.png");
     Texture2D readyScreen = LoadTexture("assets/ready-screen.png");
 
@@ -278,21 +290,29 @@ int main(void)
     Texture2D abilityD_Used_Texture = LoadTexture("assets/ability-d-used.png");
     Texture2D abilityF_Used_Texture = LoadTexture("assets/ability-f-used.png");
 
+    // Multiplayer Textures
+    Texture2D multiplayerBackground = LoadTexture("assets/multiplayer-bg.png");
+    Texture2D controlScreen2 = LoadTexture("assets/controlScreen2.png");
+    Texture2D enterPlayerName = LoadTexture("assets/EnterPlayerName-screen.png");
+
     Texture2D gameoverBackground = LoadTexture("assets/gameover-bg.png");
 
     // Main Menu Buttons
     Button onePlayerBtn{"assets/one-player-btn.png", {0.0f, 500.0f}, 0.5f}; 
-    Button twoPlayerBtn{"assets/two-players-btn.png", {0.0f, 600.0f}, 0.5f};
-    Button settingsBtn{"assets/settings-btn.png", {0.f, 700.0f}, 0.6f};
-    Button exitBtn{"assets/exit-btn.png", {0.0f, 800.0f}, 0.6f};
+    Button twoPlayerBtn{"assets/two-players-btn.png", {0.0f, 650.0f}, 0.5f};
     Button yesBtn{"assets/exit-yes-btn.png", {0.0f, 600.0f}, 0.8f};
     Button noBtn{"assets/exit-no-btn.png", {0.0f, 700.0f}, 0.8f};
+    Button settingsBtn{"assets/settings-btn.png", {0, 620.0f}, 0.6f};
+    Button startBtn{"assets/start-btn.png", {0, 500.0f}, 0.6f};
+    Button exitBtn{"assets/exit-btn.png", {0, 730.0f}, 0.6f};
+
+
 
     // Pause & Gameover Buttons 
     Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
     Button resumeBtn{"assets/resume-btn.png", {0.0f, 400.0f}, 0.7f};
-    Button restartBtn{"assets/restart-btn.png", {0.0f, 600}, 0.75f};
-    Button mainMenuBtn{"assets/main-menu-btn.png", {0.0f, 500.0f}, 0.7f};
+    Button restartBtn{"assets/restart-btn.png", {0, 500.0f}, 0.6f};
+    Button mainMenuBtn{"assets/main-menu-btn.png", {0, 620.0f}, 0.6f};
 
     // Singlepayer Buttons
     Button answerQ_Btn{"assets/answer-q.png", {150.0f, (float) (GetScreenHeight() - 350.0f)}, 1.3f};
@@ -304,6 +324,14 @@ int main(void)
     Button abilityS_Btn{"assets/ability-s.png", {(float) (GetScreenWidth() - 280.0f), 260.0f}, 0.5f};
     Button abilityD_Btn{"assets/ability-d.png", {(float) (GetScreenWidth() - 430.0f), 420.0f}, 0.53f}; 
     Button abilityF_Btn{"assets/ability-f.png", {(float) (GetScreenWidth() - 280.0f), 420.9f}, 0.538f};
+
+    // Multiplayer Buttons
+    Button answerQUBtn{"assets/answer-q-u.png", {150, (float) (GetScreenHeight() - 370)}, 0.85};
+    Button answerWIBtn{"assets/answer-w-i.png", {(float) (GetScreenWidth() - 900), (float) (GetScreenHeight() - 373)}, 0.85};
+    Button answerEOBtn{"assets/answer-e-o.png", {150, (float) (GetScreenHeight() - 200)}, 0.85};
+    Button answerRPBtn{"assets/answer-r-p.png", {(float) (GetScreenWidth() - 900), (float) (GetScreenHeight() - 203)}, 0.85};
+    Button playerNameBoxBtn{"assets/playerNameBox-btn.png", {750.0f, 415.0f}, 0.85};
+    Button playerNameBox1Btn{"assets/playerNameBox-btn.png", {750.0f, 580.0f}, 0.85};
 
     Color pauseDark = {0,0,0, 100};
 
@@ -354,21 +382,32 @@ int main(void)
                 isAnswerW_Wrong = false;
                 isAnswerE_Wrong = false;
                 isAnswerR_Wrong = false;
+                
+                player1Name = "";
+                player2Name = "";
+                enteringPlayer1Name = false;
+                enteringPlayer2Name = false;
+                namesEntered = false;
+
 
                 exitBtn.imgScale = 0.6f;
-                exitBtn.position.y = 800.0f;
-
+                
+                if (startBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = STARTGAME;
+                }
+                if (settingsBtn.isClicked(mousePosition, mouseClicked)) currentScreen = SETTINGS;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;   
+            break;
+            case STARTGAME:
                 if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
                     singlePLayerSelected = true;
                 }
                 if (twoPlayerBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = RULES;
+                    currentScreen = RULES1;
                     singlePLayerSelected = false;
                 }
-                if (settingsBtn.isClicked(mousePosition, mouseClicked)) currentScreen = SETTINGS;
-                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;   
-            break;
+                break;
             case SETTINGS:
                 if (IsKeyPressed(KEY_ESCAPE)) {
                     currentScreen = MAIN_MENU;
@@ -383,6 +422,64 @@ int main(void)
                         timer = 0;
                         currentScreen = READY;
                     } 
+                }
+                break;
+            case RULES1:
+                timer += deltaTime;
+                countdownTime = 3;
+                if (timer > inputCooldown) {
+                    if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
+                    else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                        timer = 0;
+                        currentScreen = CONTROLS1;
+                    } 
+                }
+                break;
+            case CONTROLS1:
+                timer += deltaTime;
+                countdownTime = 3;
+                if (timer > inputCooldown) {
+                    if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
+                    else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                        timer = 0;
+                        currentScreen = PLAYERNAME;
+                    } 
+                }
+                break;
+            case PLAYERNAME:
+                countdownTime = 3;
+                if (!namesEntered) {
+                    if (playerNameBoxBtn.isClicked(mousePosition, mouseClicked)) {
+                        enteringPlayer1Name = true;
+                        enteringPlayer2Name = false;
+                    }
+                    if (playerNameBox1Btn.isClicked(mousePosition, mouseClicked)) {
+                        enteringPlayer1Name = false;
+                        enteringPlayer2Name = true;
+                    }
+                    int key = GetCharPressed();
+                    while (key > 0) {
+                        if (enteringPlayer1Name && player1Name.size() < 20) {
+                            player1Name += static_cast<char>(key);
+                        }
+                        if (enteringPlayer2Name && player2Name.size() < 20) {
+                            player2Name += static_cast<char>(key);
+                        }
+                        key = GetCharPressed();
+                    }
+                    if (IsKeyPressed(KEY_BACKSPACE)) {
+                        if (enteringPlayer1Name && !player1Name.empty()) {
+                            player1Name.pop_back();
+                        }
+                        if (enteringPlayer2Name && !player2Name.empty()) {
+                            player2Name.pop_back();
+                        }
+                    }
+                    if (IsKeyPressed(KEY_ENTER) && !player1Name.empty() && !player2Name.empty()) {
+                        namesEntered = true;
+                        currentScreen = READY;
+                        singlePLayerSelected = false;
+                    }
                 }
                 break;
             case READY:
@@ -500,8 +597,14 @@ int main(void)
                 if (healthPoints <= 0) currentScreen = GAMEOVER;
 
                 // Pause
-                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE) ) currentScreen = PAUSE;
-
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
+                    previousScreen = SINGLEPLAYER;
+                    currentScreen = PAUSE;
+                }
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    previousScreen = SINGLEPLAYER;
+                    currentScreen = PAUSE;
+                }
                 // Remove 2 wrong answers
                 if ((!abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityA_Used && IsKeyPressed(KEY_A))) {
                     wrongAnswersIndices = GetTwoWrongAnswersIndices(questions[currentQuestionIndex].correctAnswerIndex);
@@ -523,10 +626,28 @@ int main(void)
                     abilityF_Used = true;
                 }
                 break;
+            case MULTIPLAYER:
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
+                    currentScreen = PAUSE;
+                    previousScreen = MULTIPLAYER;
+                    
+                }
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    currentScreen = PAUSE;
+                    previousScreen = MULTIPLAYER;
+                    
+                }
+            break;
             case PAUSE:
-                if (resumeBtn.isClicked(mousePosition, mouseClicked) ) currentScreen = SINGLEPLAYER;
-                if (mainMenuBtn.isClicked(mousePosition, mouseClicked) ) currentScreen = MAIN_MENU;
-                if (IsKeyPressed(KEY_ESCAPE)) currentScreen = SINGLEPLAYER;
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = MAIN_MENU;
+                }
+                if (resumeBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = previousScreen; 
+                }
+                else if (IsKeyPressed(KEY_ESCAPE)) {
+                    currentScreen = previousScreen; 
+                }
                 break;
             case EXIT:
                 if (yesBtn.isClicked(mousePosition, mouseClicked)) exitConfirmed = true;
@@ -577,11 +698,16 @@ int main(void)
         {
         case MAIN_MENU:
             DrawTexture(menuBackground, 0,0, WHITE);
-            DrawTexture(titleLogo, ((GetScreenWidth() - titleLogo.width) / 2.0), 200, WHITE); 
-            onePlayerBtn.DrawButtonHorizontal();
-            twoPlayerBtn.DrawButtonHorizontal();
+            DrawTextureEx(titleLogo, {(float)(GetScreenWidth() - titleLogo.width * 1.1) / 2, 260}, 0, 1.1, WHITE);
+            DrawTextureEx(fiveHearts, (Vector2){755, 70}, 0.0f, 0.3, WHITE);
+            startBtn.DrawButtonHorizontal();
             settingsBtn.DrawButtonHorizontal();
             exitBtn.DrawButtonHorizontal();
+            break;
+        case STARTGAME:
+            DrawTexture(startGameBackground, 0,0, WHITE);
+            onePlayerBtn.DrawButtonHorizontal();
+            twoPlayerBtn.DrawButtonHorizontal();
             break;
         case SINGLEPLAYER:
             DrawTexture(singleplayerBackground, 0, 0, WHITE);
@@ -659,7 +785,63 @@ int main(void)
             pauseBtn.DrawButton();
             break;
         case MULTIPLAYER:
-            //
+            DrawTexture(multiplayerBackground, 0,0, WHITE);
+            DrawTextureEx(questionBox, {(float)(GetScreenWidth() - questionBox.width * 1.9) / 2.0f, 150}, 0, 1.9, WHITE);
+            // Player 1 name outline effect
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){140 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){140, 240}, 20, 0.50, BLACK);
+            // Player 2 name outline effect
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610, 240}, 20, 0.50, BLACK);
+             //Player1 input name
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){140 + (float)x, 170 + (float)y}, 50, 1, ORANGE);}}}
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){140, 170}, 50, 1, BLACK);
+            //Player2 input name
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1610 + (float)x, 170 + (float)y}, 50, 1, PURPLE);}}}
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1610, 170}, 50, 1, BLACK);
+        
+            // Draw Score
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Score: ", (Vector2){100 + (float)x, 350 + (float)y}, 30, 1.0f, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Score: ", (Vector2){100, 350}, 30, 1.0f, BLACK);
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Score: ", (Vector2){1590 + (float)x, 350 + (float)y}, 30, 1.0f, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Score: ", (Vector2){1590, 350}, 30, 1.0f, BLACK);
+
+            // Draw Health
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Health: ", (Vector2){100 + (float)x, 400 + (float)y}, 30, 1.0f, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Health: ", (Vector2){100, 400}, 30, 1.0f, BLACK);
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Health: ", (Vector2){1590 + (float)x, 400 + (float)y}, 30, 1.0f, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Health: ", (Vector2){1590, 400}, 30, 1.0f, BLACK);
+            //DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, ORANGE);
+            //DrawTextEx(arcadeFont, "Health: ", {1590.0f, 400.0f}, 30.0f, 1.0f, PURPLE);
+
+            answerQUBtn.DrawButton();
+            answerWIBtn.DrawButton();
+            answerEOBtn.DrawButton();
+            answerRPBtn.DrawButton();
+            pauseBtn.DrawButton();
             break;
         case SETTINGS:
             DrawTexture(settingsBackground, 0, 0 , WHITE);
@@ -673,12 +855,58 @@ int main(void)
             DrawTexture(rulesScreen, 0, 0, WHITE);
             DrawTextHorizontal(arcadeFont, "Press any button to start", 30, 1, WHITE, GetScreenHeight() - 200);
             break;
+        case RULES1:
+            DrawTexture(rulesScreen1, 0, 0, WHITE);
+            DrawTextHorizontal(arcadeFont, "Press any button to proceed", 30, 1, WHITE, GetScreenHeight() - 200);
+            break;
+        case CONTROLS1:
+            DrawTexture(controlScreen2, 0,0,WHITE);
+             DrawTextHorizontal(arcadeFont, "Press any button to proceed", 30, 1, WHITE, GetScreenHeight() - 200);
+            if (timer > inputCooldown) {
+                if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+                    currentScreen = PLAYERNAME;
+                }
+            }
+            break;
+        case PLAYERNAME:
+            DrawTexture(enterPlayerName, 0, 0, WHITE);
+            playerNameBoxBtn.DrawButton();
+            playerNameBox1Btn.DrawButton();
+                //Player 1 name input
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) {
+                DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840 + (float)x, 455 + (float)y}, 30, 1, ORANGE);}}}
+                DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840, 455}, 30, 1, BLACK);
+                if (enteringPlayer1Name){
+                        for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 540 + (float)y}, 20, 1.0f, ORANGE);}}}
+                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 540}, 20, 1.0f, BLACK);}
+                //Player 2 name input        
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) {
+                DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840 + (float)x, 620 + (float)y}, 30, 1, PURPLE);}}}
+                DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840, 620}, 30, 1, BLACK);
+                if (enteringPlayer2Name){
+                        for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 705 + (float)y}, 20, 1.0f, PURPLE);}}}
+                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 705}, 20, 1.0f, BLACK);}
+
+                DrawTextHorizontal(arcadeFont, "Press ENTER to start", 30, 1, WHITE, GetScreenHeight() - 200);
+            break;
         case PAUSE:
             DrawTexture(singleplayerBackground, 0, 0,WHITE);
             DrawRectangle(0,0,GetScreenWidth(),GetScreenHeight(), pauseDark);
             DrawTexture(pausedTxt, ((GetScreenWidth() - pausedTxt.width) / 2), 150, WHITE); 
             resumeBtn.DrawButtonHorizontal();
             mainMenuBtn.DrawButtonHorizontal();
+            mainMenuBtn.imgScale = 0.84f;
+            mainMenuBtn.position.y = 530.0f;
             break;
         case EXIT:
             DrawTexture(exitBackground, 0, 0, WHITE);
@@ -688,10 +916,14 @@ int main(void)
         case GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
             restartBtn.DrawButtonHorizontal();
+            restartBtn.imgScale = 0.90f;
+            restartBtn.position.y = 500.0f;
             exitBtn.DrawButtonHorizontal();
             exitBtn.imgScale = 0.53f;
             exitBtn.position.y = 700.0f;
             mainMenuBtn.DrawButtonHorizontal();
+            mainMenuBtn.imgScale = 0.80f;
+            mainMenuBtn.position.y = 595.0f;
             break;
         default:
             break;
