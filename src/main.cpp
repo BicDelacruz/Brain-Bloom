@@ -81,19 +81,19 @@ std::vector<std::string> WrapText(Font font, const char* text, int maxWidth, int
 
 // Draw wrapped text centered both vertically and horizontally
 void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth, int screenHeight,
-                      int fontSize, Color color) {
+                      int fontSize, Color color, bool isMultiplayer) {
     // Get wrapped lines
     std::vector<std::string> lines = WrapText(font, text, maxWidth, fontSize);
 
     // Calculate total height for vertical centering
     int totalHeight = lines.size() * fontSize;
-    int posY = (screenHeight - totalHeight) / 2; // Vertically center
+    float posY = (screenHeight - totalHeight) / 2; // Vertically center
 
     for (const std::string& line : lines) {
         // Measure and center the line horizontally
         int lineWidth = MeasureTextEx(font, line.c_str(), fontSize, 1).x;
-        int posX = (screenWidth - lineWidth) / 2;
-        DrawTextEx(font, line.c_str(), (Vector2){(float)posX, (float)posY - 100}, fontSize, 1, color);
+        float posX = (screenWidth - lineWidth) / 2;
+        DrawTextEx(font, line.c_str(), (Vector2){(float)posX, (isMultiplayer) ? posY - 120: posY - 100}, fontSize, 1, color);
         posY += fontSize; // Move to the next line
     }
 }
@@ -113,7 +113,7 @@ void DrawCenteredTextAtX(const char* text, Font font, float x, float y, int minF
 
 // Draw and center text for the answer buttons based on the buttons' dimensions
 void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, Color color, 
-                    float buttonX, float buttonY, float buttonWidth, float buttonHeight, int maxWidth) {
+                    float buttonX, float buttonY, float buttonWidth, float buttonHeight, int maxWidth, bool isMultiplayer) {
     // Wrap the text into multiple lines
     std::vector<std::string> lines = WrapText(font, text, maxWidth, fontSize);
 
@@ -130,7 +130,7 @@ void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, 
         float lineX = buttonX + (buttonWidth - lineWidth) / 2;
 
         // Draw the line at the calculated position
-        DrawTextEx(font, line.c_str(), (Vector2){lineX, startY + 10}, fontSize, spacing, color);
+        DrawTextEx(font, line.c_str(), (Vector2){lineX, (isMultiplayer) ? startY :startY + 10}, fontSize, spacing, color);
 
         // Move to the next line's Y position
         startY += fontSize;
@@ -404,6 +404,7 @@ int main(void)
 
 
                 exitBtn.imgScale = 0.6f;
+                exitBtn.position.y = 730.0f;
                 
                 if (startBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = STARTGAME;
@@ -726,7 +727,7 @@ int main(void)
             DrawTexture(singleplayerBackground, 0, 0, WHITE);
             DrawTextureEx(questionBox, {(float)(GetScreenWidth() - questionBox.width * 1.8) / 2.0f, 200}, 0, 1.8, WHITE);
             
-            DrawQuestionText(arcadeFont, questions[currentQuestionIndex].questionText.c_str(), 800, GetScreenWidth(), GetScreenHeight(), 30, BLACK);
+            DrawQuestionText(arcadeFont, questions[currentQuestionIndex].questionText.c_str(), 800, GetScreenWidth(), GetScreenHeight(), 30, BLACK, false);
 
             answerQ_Btn.DrawButton();
             answerW_Btn.DrawButton();
@@ -734,17 +735,17 @@ int main(void)
             answerR_Btn.DrawButton();
             
             // Draw Answers/Choices.
-            if (isAnswerQ_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0 && !isAnswerQ_Wrong) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600); 
+            if (isAnswerQ_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, false);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0 && !isAnswerQ_Wrong) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, false); 
             
-            if (isAnswerW_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1 && !isAnswerW_Wrong) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600);
+            if (isAnswerW_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, false);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1 && !isAnswerW_Wrong) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, false);
 
-            if (isAnswerE_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2 && !isAnswerE_Wrong) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600);
+            if (isAnswerE_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, false);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2 && !isAnswerE_Wrong) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, false);
 
-            if (isAnswerR_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3 && !isAnswerR_Wrong) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600);
+            if (isAnswerR_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, false);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3 && !isAnswerR_Wrong) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, false);
 
             // Draw Timer
             if (seconds == 0) {
@@ -800,29 +801,30 @@ int main(void)
         case MULTIPLAYER:
             DrawTexture(multiplayerBackground, 0,0, WHITE);
             DrawTextureEx(questionBox, {(float)(GetScreenWidth() - questionBox.width * 1.9) / 2.0f, 150}, 0, 1.9, WHITE);
+            DrawQuestionText(arcadeFont, questions[currentQuestionIndex].questionText.c_str(), 800, GetScreenWidth(), GetScreenHeight(), 30, BLACK, true);
             // Player 1 name outline effect
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){140 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){140, 240}, 20, 0.50, BLACK);
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){100 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){100, 240}, 20, 0.50, BLACK);
             // Player 2 name outline effect
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610, 240}, 20, 0.50, BLACK);
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1590 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1590, 240}, 20, 0.50, BLACK);
             //Player1 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);}}}
-            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212, 190, 10, 40, screenWidth * 0.8f, BLACK);
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){100 + (float)x, 170 + (float)y}, (player1Name.length() > 6) ? 30:50, 1, ORANGE);}}}
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){100, 170}, (player1Name.length() > 6) ? 30:50, 1, BLACK);
             //Player2 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);}}}
-            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690, 190, 10, 40, screenWidth * 0.8f, BLACK);
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1590 + (float)x, 170 + (float)y}, (player2Name.length() > 6) ? 30:50, 1, PURPLE);}}}
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1590, 170}, (player2Name.length() > 6) ? 30:50, 1, BLACK);
         
             // Draw Score
             for (int x = -2; x <= 2; x++) {
@@ -854,6 +856,20 @@ int main(void)
             answerWIBtn.DrawButton();
             answerEOBtn.DrawButton();
             answerRPBtn.DrawButton();
+
+            // Draw Answers/Choices.
+            if (isAnswerQ_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, true);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0 && !isAnswerQ_Wrong) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, true); 
+            
+            if (isAnswerW_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, true);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1 && !isAnswerW_Wrong) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, true);
+
+            if (isAnswerE_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, true);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2 && !isAnswerE_Wrong) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, true);
+
+            if (isAnswerR_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, true);
+            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3 && !isAnswerR_Wrong) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, true);
+
             pauseBtn.DrawButton();
             break;
         case SETTINGS:
