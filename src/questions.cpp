@@ -1033,6 +1033,6 @@ std::vector<Question> questions = {
 
 };
 
-std::vector<Question> GetQuestionsVector() {
+std::vector<Question> GetQuestionsVector(void) {
     return questions;
 }

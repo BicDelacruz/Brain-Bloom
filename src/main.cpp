@@ -204,14 +204,6 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
-//For Multiplayer name input
-std::string player1Name = "";
-std::string player2Name = "";
-bool enteringPlayer1Name = false;
-bool enteringPlayer2Name = false;
-bool namesEntered = false;
-
-
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -230,25 +222,38 @@ int main(void)
     //ToggleFullscreen();                   
     SetExitKey(KEY_NULL);              
     SetTargetFPS(60);
+
+    //For Multiplayer name input
+    std::string player1Name = "";
+    std::string player2Name = "";
+    bool enteringPlayer1Name = false;
+    bool enteringPlayer2Name = false;
+    bool namesEntered = false;
     
     bool exitConfirmed = false;
-    bool isAnswerCorrect = false;
+
     bool singlePLayerSelected = false; 
+
+    bool isAnswerCorrect = false;
     bool enableInput = true;
+
     bool abilityA_Used = false;
     bool abilityS_Used = false;
     bool skipQuestion = false;
     bool abilityD_Used = false;
     bool addHealthPoint = false;
     bool abilityF_Used = false;
+
     bool isAnswerQ_Correct = false;
     bool isAnswerW_Correct = false;
     bool isAnswerE_Correct = false;
     bool isAnswerR_Correct = false;
+
     bool isAnswerQ_Wrong = false;
     bool isAnswerW_Wrong = false;
     bool isAnswerE_Wrong = false;
     bool isAnswerR_Wrong = false;
+    bool answerSelected = false;
 
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
@@ -269,6 +274,42 @@ int main(void)
     std::vector<int> wrongAnswersIndices = {-1, -1};  // 2 wrong answers' indices, reset this variabe everytime after its value gets changed
 
     double startTime = GetTime();
+
+    auto ResetGameVariables = [&]() {
+
+        countdownTime = (currentScreen == MAIN_MENU || currentScreen == GAMEOVER) ? 21 : 20;    
+        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
+        isAnswerCorrect = false; 
+        timer = 0.0f;
+
+        wrongAnswersIndices = {-1, -1};
+        wrongAnswerIndex = -1;
+
+        isAnswerQ_Correct = false;
+        isAnswerW_Correct = false;
+        isAnswerE_Correct = false;
+        isAnswerR_Correct = false;
+
+        isAnswerQ_Wrong = false;
+        isAnswerW_Wrong = false;
+        isAnswerE_Wrong = false;
+        isAnswerR_Wrong = false;
+        
+        enableInput = true;
+        answerSelected = false;
+
+        if (currentScreen == MAIN_MENU || currentScreen == GAMEOVER) {
+            score = 0;
+            healthPoints = 10;
+
+            abilityA_Used = false;
+            abilityS_Used = false;
+            skipQuestion = false;
+            abilityD_Used = false;
+            addHealthPoint = false;
+            abilityF_Used = false;
+        }
+    };
 
     Font arcadeFont = LoadFont("fonts/arcade.ttf");
 
@@ -319,8 +360,6 @@ int main(void)
     Button startBtn{"assets/start-btn.png", {0, 500.0f}, 0.6f};
     Button exitBtn{"assets/exit-btn.png", {0, 730.0f}, 0.6f};
 
-
-
     // Pause & Gameover Buttons 
     Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
     Button resumeBtn{"assets/resume-btn.png", {0.0f, 400.0f}, 0.7f};
@@ -350,6 +389,7 @@ int main(void)
 
     //--------------------------------------------------------------------------------------
 
+    
     // Main game loop
     while (!WindowShouldClose() && !exitConfirmed)
     {  
@@ -371,37 +411,13 @@ int main(void)
             case MAIN_MENU:
                 
                 // Reset variables
-                countdownTime = 21;    
-                currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
-                isAnswerCorrect = false; 
-                timer = 0.0f;
-                score = 0;
-                healthPoints = 10;
-
-                wrongAnswersIndices = {-1, -1};
-                wrongAnswerIndex = -1;
-                abilityA_Used = false;
-                abilityS_Used = false;
-                skipQuestion = false;
-                abilityD_Used = false;
-                addHealthPoint = false;
-                abilityF_Used = false;
-
-                isAnswerQ_Correct = false;
-                isAnswerW_Correct = false;
-                isAnswerE_Correct = false;
-                isAnswerR_Correct = false;
-                isAnswerQ_Wrong = false;
-                isAnswerW_Wrong = false;
-                isAnswerE_Wrong = false;
-                isAnswerR_Wrong = false;
+                ResetGameVariables();
                 
                 player1Name = "";
                 player2Name = "";
                 enteringPlayer1Name = false;
                 enteringPlayer2Name = false;
                 namesEntered = false;
-
 
                 exitBtn.imgScale = 0.6f;
                 exitBtn.position.y = 730.0f;
@@ -509,21 +525,25 @@ int main(void)
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
                     selectedAnswerIndex = 0;
+                    answerSelected = true;
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerQ_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerQ_Wrong = true;
                 } 
                 else if ((enableInput && answerW_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_W))) {
                     selectedAnswerIndex = 1;
+                    answerSelected = true;
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerW_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerW_Wrong = true;
                 }
                 else if ((enableInput && answerE_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_E))) {
                     selectedAnswerIndex = 2;
+                    answerSelected = true;
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerE_Wrong = true;
                 }
                 else if ((enableInput && answerR_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_R))) {
                     selectedAnswerIndex = 3;
+                    answerSelected = true;
                     if (selectedAnswerIndex == questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Correct = true;
                     if (selectedAnswerIndex != questions[currentQuestionIndex].correctAnswerIndex) isAnswerR_Wrong = true;
                 }
@@ -548,27 +568,11 @@ int main(void)
                     // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
                         healthPoints--;
-                        countdownTime = 20;    
-                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
-                        isAnswerCorrect = false; 
-                        timer = 0.0f;
-                        wrongAnswersIndices = {-1, -1};
-
-                        isAnswerQ_Correct = false;
-                        isAnswerW_Correct = false;
-                        isAnswerE_Correct = false;
-                        isAnswerR_Correct = false;
-
-                        isAnswerQ_Wrong = false;
-                        isAnswerW_Wrong = false;
-                        isAnswerE_Wrong = false;
-                        isAnswerR_Wrong = false;
-                        
-                        enableInput = true;
+                        ResetGameVariables();
                     }
                 }
 
-                else if (isAnswerCorrect || skipQuestion) {    // If answer is correct, resets variables
+                else if (isAnswerCorrect || skipQuestion) {    // If answer is correct or skib ability used, resets variables
                     //Reset timer, incase player corectly answers in the last second, since there is a 1.5s delay to reset variables
                     countdownTime = 20;  
                     timer += deltaTime;
@@ -586,25 +590,28 @@ int main(void)
 
                         skipQuestion = false;
 
-                        countdownTime = 20;    
-                        currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
-                        isAnswerCorrect = false; 
+                        ResetGameVariables();
+                    }
+                } else if (!isAnswerCorrect && answerSelected) { // If answer is incorrect and player has selected an answer, resets variables
+                    //Reset timer, incase player corectly answers in the last second, since there is a 1.5s delay to reset variables
+                    countdownTime = 20;  
+                    timer += deltaTime;
+                    enableInput = false;
+                    
+                    // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
+                    if (timer > 1.5f) {
 
-                        timer = 0.0f;
-                        wrongAnswersIndices = {-1, -1};
-                        wrongAnswerIndex = -1;
+                        if (addHealthPoint) healthPoints++;
+                        addHealthPoint = false;
+    
+                        if (skipQuestion) {
+                            score++;
+                            abilityS_Used = true;                       
+                        }
 
-                        isAnswerQ_Correct = false;
-                        isAnswerW_Correct = false;
-                        isAnswerE_Correct = false;
-                        isAnswerR_Correct = false;
+                        skipQuestion = false;
 
-                        isAnswerQ_Wrong = false;
-                        isAnswerW_Wrong = false;
-                        isAnswerE_Wrong = false;
-                        isAnswerR_Wrong = false;
-                        
-                        enableInput = true;
+                        ResetGameVariables();
                     }
                 }
 
@@ -671,31 +678,7 @@ int main(void)
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
                 if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
-                    countdownTime = 21;    
-                    currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
-                    isAnswerCorrect = false; 
-                    timer = 0.0f;
-                    score = 0;
-                    healthPoints = 10;
-
-                    wrongAnswersIndices = {-1, -1};
-                    wrongAnswerIndex = -1;
-                    abilityA_Used = false;
-                    abilityS_Used = false;
-                    skipQuestion = false;
-                    abilityD_Used = false;
-                    addHealthPoint = false;
-                    abilityF_Used = false;
-
-                    isAnswerQ_Correct = false;
-                    isAnswerW_Correct = false;
-                    isAnswerE_Correct = false;
-                    isAnswerR_Correct = false;
-                    isAnswerQ_Wrong = false;
-                    isAnswerW_Wrong = false;
-                    isAnswerE_Wrong = false;
-                    isAnswerR_Wrong = false;
-
+                    ResetGameVariables();
                     currentScreen = RULES;   
                 } 
             default:
@@ -753,6 +736,9 @@ int main(void)
             }
             else if (skipQuestion) {
                 DrawTextHorizontal(arcadeFont, "Skip!", 50.0f, 1.0f, ORANGE, 100.0f);  
+            }
+            else if (!isAnswerCorrect && answerSelected) {
+                DrawTextHorizontal(arcadeFont, "Wrong!", 50.0f, 1.0f, RED, 100.0f);
             }
             else if (!isAnswerCorrect && seconds != 0) {
                 DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50.0f, 1.0f, BLACK, 100.0f);
