@@ -395,15 +395,6 @@ int main(void)
     {  
         float deltaTime = GetFrameTime();
 
-        if (GetTime() - startTime >= 1.0) {
-            countdownTime--;
-            startTime = GetTime();
-        }
-
-        if (countdownTime < 0) countdownTime = 0;
-        
-        seconds = countdownTime % 60;
-
         Vector2 mousePosition = GetMousePosition();
         bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT); 
         
@@ -513,7 +504,18 @@ int main(void)
                 }
                 break;
             case READY:
+
+                if (GetTime() - startTime >= 1.0) {
+                    countdownTime--;
+                    startTime = GetTime();
+                }
+
+                if (countdownTime < 0) countdownTime = 0;
+        
+                seconds = countdownTime % 60;
+
                 timer += deltaTime;
+                
                 if (timer >= 3.0f) {
                     currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
                     countdownTime = 20;
@@ -521,7 +523,15 @@ int main(void)
                 }
                 break;
             case SINGLEPLAYER:
-                
+                if (GetTime() - startTime >= 1.0) {
+                    countdownTime--;
+                    startTime = GetTime();
+                }
+
+                if (countdownTime < 0) countdownTime = 0;
+        
+                seconds = countdownTime % 60;
+
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
                     selectedAnswerIndex = 0;
