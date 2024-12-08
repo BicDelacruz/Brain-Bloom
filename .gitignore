@@ -1,2 +1,3 @@
 *.dsym
+*.bin
 main

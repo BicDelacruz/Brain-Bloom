@@ -4,7 +4,6 @@
 *   Add main menu background animation
 *   Change timer font
 *   Complete settings (UI, options for window size, audio)
-*   Implemet highscore (only for singleplayer?) and/or leaderboards (only in multiplayer?)
 *   Cosmetics (cursor skins when player reaches a highscore)
 *   Audio (for buttons and etc.)
 *   Implement loading screen
@@ -13,9 +12,12 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
+
+#define DATA_FILE_PATH "data/data.bin" 
 
 // Screen manager, based on an example from the raylib website
 typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, CONTROLS1, PLAYERNAME, EXIT } GameScreen;
@@ -204,6 +206,27 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
+// Save highscore to a binary file
+void SaveHighScore(const char* filename, int value) {
+    std::ofstream outFile(filename, std::ios::binary);
+    if (outFile.is_open()) {
+        outFile.write(reinterpret_cast<const char*>(&value), sizeof(value));
+        outFile.close();
+    }
+}
+
+// Load highscore from a binary file. Will create a new .bin file if not existing
+int LoadHighScore(const char* filename) {
+    int value = 0;
+    std::ifstream inFile(filename, std::ios::binary);
+    if (inFile.is_open()) {
+        inFile.read(reinterpret_cast<char*>(&value), sizeof(value));
+        inFile.close();
+    }
+    return value;
+}
+
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -255,6 +278,8 @@ int main(void)
     bool isAnswerR_Wrong = false;
     bool answerSelected = false;
 
+    bool exitFromGameover = false;
+
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;           // Reset to 0.0f ater each use
@@ -268,6 +293,7 @@ int main(void)
     int currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
     int selectedAnswerIndex = -1;
     int score = 0;
+    int highscore = LoadHighScore(DATA_FILE_PATH);
     int healthPoints = 10;
     int wrongAnswerIndex;
 
@@ -363,7 +389,7 @@ int main(void)
     // Pause & Gameover Buttons 
     Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
     Button resumeBtn{"assets/resume-btn.png", {0.0f, 400.0f}, 0.7f};
-    Button restartBtn{"assets/restart-btn.png", {0, 500.0f}, 0.6f};
+    Button restartBtn{"assets/restart-btn.png", {0, 500.0f}, 0.73f};
     Button mainMenuBtn{"assets/main-menu-btn.png", {0, 620.0f}, 0.6f};
 
     // Singlepayer Buttons
@@ -515,7 +541,7 @@ int main(void)
                 seconds = countdownTime % 60;
 
                 timer += deltaTime;
-                
+
                 if (timer >= 3.0f) {
                     currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
                     countdownTime = 20;
@@ -637,22 +663,22 @@ int main(void)
                     currentScreen = PAUSE;
                 }
                 // Remove 2 wrong answers
-                if ((!abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityA_Used && IsKeyPressed(KEY_A))) {
+                if ((enableInput && !abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityA_Used && IsKeyPressed(KEY_A))) {
                     wrongAnswersIndices = GetTwoWrongAnswersIndices(questions[currentQuestionIndex].correctAnswerIndex);
                     abilityA_Used = true;
                 }
                 // Skip question
-                if ((!abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityS_Used && IsKeyPressed(KEY_S))) {
+                if ((enableInput && !abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityS_Used && IsKeyPressed(KEY_S))) {
                     skipQuestion = true; 
                     abilityS_Used = true;
                 }
                 // Gain 1 health point if question is answered correctly
-                if ((!abilityD_Used && abilityD_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityD_Used && IsKeyPressed(KEY_D))) {
+                if ((enableInput && !abilityD_Used && abilityD_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityD_Used && IsKeyPressed(KEY_D))) {
                     addHealthPoint = true;
                     abilityD_Used = true;
                 }
                 // Remove 1 wrong option
-                if ((!abilityF_Used && abilityF_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityF_Used && IsKeyPressed(KEY_F))) {
+                if ((enableInput && !abilityF_Used && abilityF_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityF_Used && IsKeyPressed(KEY_F))) {
                     wrongAnswerIndex = GetOneWrongAnswerIndex(questions[currentQuestionIndex].correctAnswerIndex);
                     abilityF_Used = true;
                 }
@@ -682,11 +708,21 @@ int main(void)
                 break;
             case EXIT:
                 if (yesBtn.isClicked(mousePosition, mouseClicked)) exitConfirmed = true;
-                if (noBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                if (noBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen =  (exitFromGameover) ? GAMEOVER:MAIN_MENU;  // Returns to GAMEOVER screen when player clicks no, if in the GAMEOVER screen
+                    exitFromGameover = false;
+                }
                 break;
             case GAMEOVER:
+                if (score > highscore) {
+                    highscore = score;
+                    SaveHighScore(DATA_FILE_PATH, highscore);
+                }
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
-                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) {
+                   currentScreen = EXIT;
+                    exitFromGameover = true;
+                }
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     ResetGameVariables();
                     currentScreen = RULES;   
@@ -940,15 +976,20 @@ int main(void)
             break;
         case GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
+
+            DrawTextHorizontal(arcadeFont, TextFormat("Score: %i", score), 50.0f, 1.0f, BLACK, 300.0f);
+            DrawTextHorizontal(arcadeFont, TextFormat("High Score: %i", highscore), 50.0f, 1.0f, ORANGE, 400.0f);
+
             restartBtn.DrawButtonHorizontal();
-            restartBtn.imgScale = 0.90f;
-            restartBtn.position.y = 500.0f;
+
             exitBtn.DrawButtonHorizontal();
             exitBtn.imgScale = 0.53f;
             exitBtn.position.y = 700.0f;
+
             mainMenuBtn.DrawButtonHorizontal();
             mainMenuBtn.imgScale = 0.80f;
             mainMenuBtn.position.y = 595.0f;
+
             break;
         default:
             break;
