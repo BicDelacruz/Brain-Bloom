@@ -341,13 +341,17 @@ int main(void)
     Font arcadeFont = LoadFont("assets/fonts/arcade.ttf");
 
     Music mainMenuMusic = LoadMusicStream("assets/sounds/Flim.mp3");
-    Music singleplayerMusic = LoadMusicStream("assets/sounds/Fingerbib.mp3");
-    SetMusicVolume(singleplayerMusic, 0.7f);
+    Music singleplayerMusic = LoadMusicStream("assets/sounds/singleplayer-music.mp3");
+    Music singleplayerLowHealthMusic = LoadMusicStream("assets/sounds/low-health.mp3");
 
-    Sound menuButtonsSound = LoadSound("assets/sounds/button_click_bright_003.mp3");
+    Sound menuButtonsSound = LoadSound("assets/sounds/button_click.mp3");
     Sound correctAnswerSound = LoadSound("assets/sounds/correct_answer.mp3");
     Sound wrongAnswerSound = LoadSound("assets/sounds/wrong_answer.mp3");
     Sound gameoverSound = LoadSound("assets/sounds/gameover.mp3");
+    Sound timesUpSound = LoadSound("assets/sounds/no-time-left.mp3");
+    SetSoundVolume(timesUpSound, 0.5f);
+    Sound countdownSound = LoadSound("assets/sounds/3s-countdown.mp3");
+    SetSoundVolume(countdownSound, 0.3f);
 
     // Main Menu Textures
     Texture2D titleLogo = LoadTexture("assets/title-logo.png");
@@ -486,7 +490,7 @@ int main(void)
             case RULES:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
-                countdownTime = 3;
+                countdownTime = 4;
                 if (timer > inputCooldown) {
                     if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
                     else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
@@ -497,7 +501,7 @@ int main(void)
                 break;
             case RULES1:
                 timer += deltaTime;
-                countdownTime = 3;
+                countdownTime = 4;
                 if (timer > inputCooldown) {
                     if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
                     else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
@@ -509,7 +513,7 @@ int main(void)
             case CONTROLS1:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
-                countdownTime = 3;
+                countdownTime = 4;
                 if (timer > inputCooldown) {
                     if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
                     else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
@@ -519,7 +523,7 @@ int main(void)
                 }
                 break;
             case PLAYERNAME:
-                countdownTime = 3;
+                countdownTime = 4;
                 if (!namesEntered) {
                     if (playerNameBoxBtn.isClicked(mousePosition, mouseClicked)) {
                         enteringPlayer1Name = true;
@@ -556,9 +560,10 @@ int main(void)
                 break;
             case READY:
 
-                if (IsMusicStreamPlaying(mainMenuMusic)) StopMusicStream(mainMenuMusic);
-                if (!IsMusicStreamPlaying(singleplayerMusic)) PlayMusicStream(singleplayerMusic);
-                UpdateMusicStream(singleplayerMusic);
+                if (IsMusicStreamPlaying(mainMenuMusic)) {
+                    StopMusicStream(mainMenuMusic);
+                    PlaySound(countdownSound);
+                } 
 
                 if (GetTime() - startTime >= 1.0) {
                     countdownTime--;
@@ -578,6 +583,10 @@ int main(void)
                 }
                 break;
             case SINGLEPLAYER:
+                if (!IsMusicStreamPlaying(singleplayerMusic)) {
+                    PlayMusicStream(singleplayerMusic);
+                }
+                 
                 UpdateMusicStream(singleplayerMusic);  // Update music stream to continue playing it
 
                 if (GetTime() - startTime >= 1.0) {
@@ -629,10 +638,13 @@ int main(void)
                     }
                 }
 
+                if (seconds == 1) PlaySound(timesUpSound);
+
                 if (seconds == 0) {    // If time runs out:
                     timer += deltaTime;
                     selectedAnswerIndex = -1;
                     enableInput = false;
+                    addHealthPoint = false;
 
                     // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
@@ -667,21 +679,17 @@ int main(void)
                     timer += deltaTime;
                     enableInput = false;
                     
-                    // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
+                    // Gives time to draw  "Incorrect!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
-
-                        if (addHealthPoint) healthPoints++;
                         addHealthPoint = false;
-    
-                        if (skipQuestion) {
-                            score++;
-                            abilityS_Used = true;                       
-                        }
-
-                        skipQuestion = false;
-
                         ResetGameVariables();
                     }
+                }
+
+                if (healthPoints == 1) {
+                    StopMusicStream(singleplayerMusic);
+                    PlayMusicStream(singleplayerLowHealthMusic);
+                    UpdateMusicStream(singleplayerLowHealthMusic);
                 }
 
                 if (healthPoints <= 0) currentScreen = GAMEOVER;
@@ -749,10 +757,12 @@ int main(void)
                 }
                 break;
             case GAMEOVER:
-                if (IsMusicStreamPlaying(singleplayerMusic)) {
+                if (IsMusicStreamPlaying(singleplayerMusic) || IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
                     StopMusicStream(singleplayerMusic); // Stop singleplayer music
+                    StopMusicStream(singleplayerLowHealthMusic); // Stop singleplayer music
                     PlaySound(gameoverSound);
                 }
+
                 if (!IsMusicStreamPlaying(mainMenuMusic)) PlayMusicStream(mainMenuMusic);
 
                 if (score > highscore) {
@@ -847,7 +857,7 @@ int main(void)
             DrawTextEx(arcadeFont, TextFormat("Score: %i", score), {100.0f, 350.0f}, 30.0f, 1.0f, BLACK);
 
             // Draw Health
-            DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, BLACK);
+            DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, (healthPoints == 1) ? RED:BLACK);
             if (healthPoints == 11) DrawTextureEx(health_11, {100.0f, 450.0f}, 0.0f, 0.5f, WHITE);
             if (healthPoints == 10) DrawTextureEx(health_10, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
             if (healthPoints == 9) DrawTextureEx(health_9, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
@@ -1053,10 +1063,13 @@ int main(void)
     UnloadFont(arcadeFont);
     UnloadMusicStream(mainMenuMusic);
     UnloadMusicStream(singleplayerMusic);
+    UnloadMusicStream(singleplayerLowHealthMusic);
     UnloadSound(menuButtonsSound);
     UnloadSound(wrongAnswerSound);
     UnloadSound(correctAnswerSound);
     UnloadSound(gameoverSound);
+    UnloadSound(timesUpSound);
+    UnloadSound(countdownSound);
     UnloadTexture(menuBackground);
     UnloadTexture(titleLogo);
     UnloadTexture(pausedTxt);
