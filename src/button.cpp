@@ -19,6 +19,8 @@ Button::Button(const char* imagePath, Vector2 imagePosition, float scale)
     width = texture.width;
     height = texture.height;
 
+    isDrawnHorizontal = false; // Set to false for the answerQ_Btn, answerW_Btn, ... buttons
+
     UnloadImage(img);
 }
 
@@ -26,22 +28,23 @@ Button::~Button() {
     UnloadTexture(texture);
 }
 
-void Button::DrawButton() {
+void Button::DrawButton(void) {
     DrawTextureV(texture, position, WHITE);
 }
 
-void Button::DrawButtonHorizontal() {
-    position.x = (float) (GetScreenWidth() - texture.width * imgScale) / 2;
+void Button::DrawButtonHorizontal(void) {
+    isDrawnHorizontal = true;
+    position.x = (float) ((GetScreenWidth() - width * imgScale) / 2);
     DrawTextureEx(texture, {position.x, position.y}, 0.0f, imgScale, WHITE);
 }
 
 bool Button::isClicked(Vector2 mousePos, bool mousePressed)
 {
     Rectangle buttonRect = { 
-        (float) position.x, 
-        (float) position.y, 
-        (float) texture.width, 
-        (float) texture.height  
+        position.x, 
+        position.y, 
+        (isDrawnHorizontal) ? width * imgScale : width,     // isDrawnHorizontal will stay false until the Button object uses DrawButtonHorizontal() 
+        (isDrawnHorizontal) ? height * imgScale : height    // only menu buttons use DrawButtonHorizontal(), answer buttons need the exact width and height for the buttonRect
     };
 
     return mousePressed && CheckCollisionPointRec(mousePos, buttonRect);
