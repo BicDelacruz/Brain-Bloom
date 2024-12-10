@@ -805,7 +805,6 @@ int main(void)
                 }
                 break;
             case MULTIPLAYER:
-
                 if (GetTime() - startTime >= 1.0) {
                     countdownTime--;
                     startTime = GetTime();}
@@ -841,14 +840,6 @@ int main(void)
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
                     }
-
-                if (IsMusicStreamPlaying(mainMenuMusic)) StopMusicStream(mainMenuMusic);
-
-                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
-                    PlaySound(menuButtonsSound);
-                    currentScreen = PAUSE;
-                    previousScreen = MULTIPLAYER;
-
                 }
 
                 // Handle Player 2 input (U, I, O, P keys)
@@ -967,6 +958,7 @@ int main(void)
                         currentScreen = PAUSE;
                         previousScreen = MULTIPLAYER;
                     }
+
                 break;
             case PAUSE:
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
@@ -1070,14 +1062,10 @@ int main(void)
                     currentScreen = PAUSE;
                 }
                 break;
-
-                    currentScreen = RULES;   
-                    PlaySound(menuButtonsSound);
-                }
-
             default:
                 break;
-        }
+            }
+        
 
         //----------------------------------------------------------------------------------
         // Draw
