@@ -16,11 +16,14 @@
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
+#include <ctime>
+#include <thread>
+#include <chrono>
 
 #define DATA_FILE_PATH "data/data.bin" 
 
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, CONTROLS1, PLAYERNAME, EXIT } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, GAMEOVER1, CONTROLS1, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing,
@@ -100,7 +103,7 @@ void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth
     }
 }
 
-//Re-center Player name input in a fixed x and y coordinates base on its with size and length
+//Re-center Player name input in a fixed x and y coordinates base on its width size and length
 void DrawCenteredTextAtX(const char* text, Font font, float x, float y, int minFontSize, int maxFontSize, float maxWidth, Color color) {
     int fontSize = maxFontSize;
     Vector2 textSize = MeasureTextEx(font, text, fontSize, 1);
@@ -206,6 +209,7 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
+
 // Save highscore to a binary file
 void SaveHighScore(const char* filename, int value) {
     std::ofstream outFile(filename, std::ios::binary);
@@ -284,6 +288,7 @@ int main(void)
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;           // Reset to 0.0f ater each use
+    
 
     std::vector<Question> questions = GetQuestionsVector();
     std::vector<int> history;    // To store last 'historySize' generated numbers
@@ -297,6 +302,24 @@ int main(void)
     int highscore = LoadHighScore(DATA_FILE_PATH);
     int healthPoints = 10;
     int wrongAnswerIndex;
+
+    //Multiplayer variables
+    int player1Score = 0;
+    int player2Score = 0;
+    int player1Healthpoints = 10;
+    int player2Healthpoints = 10;
+    bool player1Selected = false, player2Selected = false;
+    bool gameInProgress = false;
+    int player1Answer = -1, player2Answer = -1;
+    float player1AnswerTime = 0, player2AnswerTime = 0;
+    bool correctAnswer = false;
+    bool messageDisplayed = false;
+    std::string gameMessage;
+    float gameOverDelayTimer = 0.0f;
+    bool isGameOverTriggered = false;
+    std::string gameMessage1;
+    std::string gameMessage2;
+
 
     std::vector<int> wrongAnswersIndices = {-1, -1};  // 2 wrong answers' indices, reset this variabe everytime after its value gets changed
 
@@ -324,6 +347,15 @@ int main(void)
         
         enableInput = true;
         answerSelected = false;
+        
+        player1Selected = false, player2Selected = false;
+        player1Answer = -1, player2Answer = -1;
+        player1AnswerTime = 0, player2AnswerTime = 0;
+        correctAnswer = false;
+        gameMessage = "";
+        messageDisplayed = false;
+        gameMessage1 = "";
+        gameMessage2 = "";
 
         if (currentScreen == MAIN_MENU || currentScreen == GAMEOVER) {
             score = 0;
@@ -335,6 +367,25 @@ int main(void)
             abilityD_Used = false;
             addHealthPoint = false;
             abilityF_Used = false;
+
+            //Multiplayer variables
+            player1Name = "";
+            player2Name = "";
+            enteringPlayer1Name = false;
+            enteringPlayer2Name = false;
+            namesEntered = false;
+            player1Score = 0;
+            player2Score = 0;
+            player1Healthpoints = 10;
+            player2Healthpoints = 10;
+            player1Selected = false, player2Selected = false;
+            player1Answer = -1, player2Answer = -1;
+            player1AnswerTime = 0, player2AnswerTime = 0;
+            correctAnswer = false;
+            gameMessage = "";
+            gameMessage1 = "";
+            gameMessage2 = "";
+
         }
     };
 
@@ -390,6 +441,7 @@ int main(void)
     Texture2D enterPlayerName = LoadTexture("assets/EnterPlayerName-screen.png");
 
     Texture2D gameoverBackground = LoadTexture("assets/gameover-bg.png");
+    Texture2D leaderBoardBackground = LoadTexture("assets/Leaderboards-screen.png");
 
     // Main Menu Buttons
     Button onePlayerBtn{"assets/one-player-btn.png", {0.0f, 500.0f}, 0.5f}; 
@@ -405,6 +457,7 @@ int main(void)
     Button resumeBtn{"assets/resume-btn.png", {0.0f, 400.0f}, 0.7f};
     Button restartBtn{"assets/restart-btn.png", {0, 500.0f}, 0.73f};
     Button mainMenuBtn{"assets/main-menu-btn.png", {0, 620.0f}, 0.6f};
+    Button leaderboardsBtn{"assets/leaderboards-btn.png", {0, 620.0f}, 0.93f};
 
     // Singlepayer Buttons
     Button answerQ_Btn{"assets/answer-q.png", {150.0f, (float) (GetScreenHeight() - 350.0f)}, 1.3f};
@@ -445,12 +498,20 @@ int main(void)
                 
                 // Reset variables
                 ResetGameVariables();
-                
+
+                gameOverDelayTimer = 0.0f;
+                isGameOverTriggered = false;
                 player1Name = "";
                 player2Name = "";
                 enteringPlayer1Name = false;
                 enteringPlayer2Name = false;
                 namesEntered = false;
+                player1Score = 0;
+                player2Score = 0;
+                player1Healthpoints = 10;
+                player2Healthpoints = 10;
+                gameMessage1 = "";
+                gameMessage2 = "";
 
                 exitBtn.imgScale = 0.6f;
                 exitBtn.position.y = 730.0f;
@@ -560,6 +621,14 @@ int main(void)
                 break;
             case READY:
 
+                if (GetTime() - startTime >= 1.0) {
+                countdownTime--;
+                startTime = GetTime();}
+
+                if (countdownTime < 0) countdownTime = 0;
+                
+
+
                 if (IsMusicStreamPlaying(mainMenuMusic)) {
                     StopMusicStream(mainMenuMusic);
                     PlaySound(countdownSound);
@@ -572,6 +641,7 @@ int main(void)
 
                 if (countdownTime < 0) countdownTime = 0;
         
+
                 seconds = countdownTime % 60;
 
                 timer += deltaTime;
@@ -583,6 +653,17 @@ int main(void)
                 }
                 break;
             case SINGLEPLAYER:
+
+                if (GetTime() - startTime >= 1.0) {
+                countdownTime--;
+                startTime = GetTime();}
+
+                if (countdownTime < 0) countdownTime = 0;
+                
+                seconds = countdownTime % 60;
+
+                
+
                 if (!IsMusicStreamPlaying(singleplayerMusic)) {
                     PlayMusicStream(singleplayerMusic);
                 }
@@ -597,6 +678,7 @@ int main(void)
                 if (countdownTime < 0) countdownTime = 0;
         
                 seconds = countdownTime % 60;
+
 
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
@@ -723,25 +805,184 @@ int main(void)
                 }
                 break;
             case MULTIPLAYER:
+
+                if (GetTime() - startTime >= 1.0) {
+                    countdownTime--;
+                    startTime = GetTime();}
+                if (countdownTime < 0) countdownTime = 0;
+                seconds = countdownTime % 60;
+
+                // Start the timer for a new question
+                if (!gameInProgress) { // Reset the game when a new question starts
+                    timer = 0;  // Reset timer
+                    enableInput = true;  // Enable player input
+                    gameInProgress = true; // Indicate the game is in progress for the new question
+                }
+
+                // Handle Player 1 input (Q, W, E, R keys)
+                if (enableInput && !player1Selected) { // Check if input is enabled and Player 1 hasn't selected
+                    if (IsKeyPressed(KEY_Q)) {
+                        player1Answer = 0;
+                        player1Selected = true; // Lock Player 1's choice
+                        player1AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_W)) {
+                        player1Answer = 1;
+                        player1Selected = true; // Lock Player 1's choice
+                        player1AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_E)) {
+                        player1Answer = 2;
+                        player1Selected = true; // Lock Player 1's choice
+                        player1AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_R)) {
+                        player1Answer = 3;
+                        player1Selected = true; // Lock Player 1's choice
+                        player1AnswerTime = (int)(GetTime() * 1000);
+                    }
+
                 if (IsMusicStreamPlaying(mainMenuMusic)) StopMusicStream(mainMenuMusic);
 
                 if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     PlaySound(menuButtonsSound);
                     currentScreen = PAUSE;
                     previousScreen = MULTIPLAYER;
+
                 }
-            break;
+
+                // Handle Player 2 input (U, I, O, P keys)
+                if (enableInput && !player2Selected) { // Check if input is enabled and Player 2 hasn't selected
+                    if (IsKeyPressed(KEY_U)) {
+                        player2Answer = 0;
+                        player2Selected = true; // Lock Player 2's choice
+                        player2AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_I)) {
+                        player2Answer = 1;
+                        player2Selected = true; // Lock Player 2's choice
+                        player2AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_O)) {
+                        player2Answer = 2;
+                        player2Selected = true; // Lock Player 2's choice
+                        player2AnswerTime = (int)(GetTime() * 1000);
+                    }
+                    else if (IsKeyPressed(KEY_P)) {
+                        player2Answer = 3;
+                        player2Selected = true; // Lock Player 2's choice
+                        player2AnswerTime = (int)(GetTime() * 1000);
+                    }
+                }
+
+                // After both players have selected their answers, proceed with evaluation
+                if (player1Selected && player2Selected) {
+                    // Stop the timer after both players select
+                    countdownTime = 20;
+                    timer += deltaTime;
+                    enableInput = false;
+                if (timer > 0.50f && !messageDisplayed) {
+                    // Evaluate answers
+                    if (player1Answer == questions[currentQuestionIndex].correctAnswerIndex && 
+                        player2Answer != questions[currentQuestionIndex].correctAnswerIndex) {
+                        gameMessage = "Player 1 got the correct answer!";
+                        player1Score++;
+                        player2Healthpoints--;
+                    }
+                    else if (player2Answer == questions[currentQuestionIndex].correctAnswerIndex && 
+                            player1Answer != questions[currentQuestionIndex].correctAnswerIndex) {
+                        gameMessage = "Player 2 got the correct answer!";
+                        player2Score++;
+                        player1Healthpoints--;
+                    }
+                    else if (player1Answer == questions[currentQuestionIndex].correctAnswerIndex && 
+                            player2Answer == questions[currentQuestionIndex].correctAnswerIndex) {
+                        // Both players got it correct, check who answered first
+                        if (player1AnswerTime < player2AnswerTime) {
+                            gameMessage = "Both players are correct, but Player 1 was faster!";
+                            player1Score++;
+                        } else if (player2AnswerTime < player1AnswerTime) {
+                            gameMessage = "Both players are correct, but Player 2 was faster!";
+                            player2Score++;
+                        }
+                    }
+                    else {
+                        // Both players got it wrong
+                        gameMessage = "Both players got the wrong answer!";
+                        player1Healthpoints--;
+                        player2Healthpoints--;
+                        correctAnswer = true;
+                    }
+
+                        messageDisplayed = true; // Flag to indicate message is displayed
+                        timer = 0; // Reset timer for next delay
+                        
+                    }
+
+                    // Delay before resetting game variables
+                    if (messageDisplayed && timer > 2.5f) { // Adjust delay as needed
+                        ResetGameVariables(); // Reset variables after delay
+                        messageDisplayed = false; // Reset the flag
+                    }
+                }
+
+                // Handle timer countdown logic (time out handling)
+                if (seconds == 0) {  // If time runs out:
+                    timer += deltaTime;
+                    player1Answer = -1;
+                    player2Answer = -1;
+                    enableInput = false;
+                    correctAnswer = true;
+                    gameMessage = "You both ran out of time!";
+
+                    // Both players lose health points and reset game variables
+                    if (timer > 2.0f) {
+                        player1Healthpoints--;
+                        player2Healthpoints--;
+                        ResetGameVariables();
+                    }
+                }
+
+                // Add a delay before going to game over screen
+                if (player1Healthpoints <= 0 || player2Healthpoints <= 0) {
+                    if (!isGameOverTriggered) {
+                        isGameOverTriggered = true;  // Flag to indicate game-over condition
+                        gameOverDelayTimer = 0.0f;   // Reset the timer
+                    }
+                }
+                // If the game-over condition has been triggered, increment the timer
+                if (isGameOverTriggered) {
+                    gameOverDelayTimer += deltaTime;  // Update timer with the elapsed time
+
+                    if (gameOverDelayTimer >= 2.5f) { // Add a 2.5-second delay
+                        currentScreen = GAMEOVER1;    // Switch to the Game Over screen
+                    }
+                }
+                // Pause
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
+                        currentScreen = PAUSE;
+                        previousScreen = MULTIPLAYER;                 
+                    }
+                    if (IsKeyPressed(KEY_ESCAPE)) {
+                        currentScreen = PAUSE;
+                        previousScreen = MULTIPLAYER;
+                    }
+                break;
             case PAUSE:
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = MAIN_MENU;
                     PlaySound(menuButtonsSound);
                 }
                 if (resumeBtn.isClicked(mousePosition, mouseClicked)) {
+
+                    currentScreen = previousScreen;
+
                     currentScreen = previousScreen; 
                     PlaySound(menuButtonsSound);
+
                 }
                 else if (IsKeyPressed(KEY_ESCAPE)) {
-                    currentScreen = previousScreen; 
+                    currentScreen = previousScreen;
                 }
                 break;
             case EXIT:
@@ -780,9 +1021,60 @@ int main(void)
                 }
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     ResetGameVariables();
+
+                    currentScreen = RULES; } 
+                break;
+            case GAMEOVER1:
+                // Determine the winner based on scores
+                if (player1Score > player2Score) {
+                    gameMessage = player1Name + " wins!";
+                    gameMessage1 = "Score: " + std::to_string(player1Score);           
+                    gameMessage2 = "Remaining Health: " + std::to_string(player1Healthpoints);
+                } else if (player2Score > player1Score) {
+                    gameMessage = player2Name + " wins! ";
+                    gameMessage1 = "Score: " + std::to_string(player2Score);           
+                    gameMessage2 = "Remaining Health: " + std::to_string(player2Healthpoints);
+                } else {
+                    gameMessage = "It's a draw!";
+                    gameMessage1 = "Score: " + std::to_string(player1Score);
+                }
+
+                if (leaderboardsBtn.isClicked(mousePosition, mouseClicked)) currentScreen = LEADERBOARDS;
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
+                if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
+                    gameOverDelayTimer = 0.0f;
+                    isGameOverTriggered = false;
+                    player1Name = "";
+                    player2Name = "";
+                    enteringPlayer1Name = false;
+                    enteringPlayer2Name = false;
+                    namesEntered = false;
+                    player1Score = 0;
+                    player2Score = 0;
+                    player1Healthpoints = 10;
+                    player2Healthpoints = 10;
+                    gameMessage1 = "";
+                    gameMessage2 = "";
+                    ResetGameVariables();
+                    currentScreen = RULES1; } 
+                break;
+            case LEADERBOARDS:
+                // Pause
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
+                    previousScreen = LEADERBOARDS;
+                    currentScreen = PAUSE;
+                }
+                if (IsKeyPressed(KEY_ESCAPE)) {
+                    previousScreen = LEADERBOARDS;
+                    currentScreen = PAUSE;
+                }
+                break;
+
                     currentScreen = RULES;   
                     PlaySound(menuButtonsSound);
                 }
+
             default:
                 break;
         }
@@ -883,7 +1175,6 @@ int main(void)
             if (abilityF_Used) DrawTextureEx(abilityF_Used_Texture, {abilityF_Btn.position.x, abilityF_Btn.position.y}, 0, abilityF_Btn.imgScale, WHITE);
             else abilityF_Btn.DrawButton();
 
-
             pauseBtn.DrawButton();
             break;
         case MULTIPLAYER:
@@ -894,26 +1185,26 @@ int main(void)
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){100 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){100, 240}, 20, 0.50, BLACK);
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){140 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Player 1", (Vector2){140, 240}, 20, 0.50, BLACK);
             // Player 2 name outline effect
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1590 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1590, 240}, 20, 0.50, BLACK);
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610, 240}, 20, 0.50, BLACK);
             //Player1 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){100 + (float)x, 170 + (float)y}, (player1Name.length() > 6) ? 30:50, 1, ORANGE);}}}
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){100, 170}, (player1Name.length() > 6) ? 30:50, 1, BLACK);
+            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);}}}
+            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212, 190, 10, 40, screenWidth * 0.8f, BLACK);
             //Player2 input name
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1590 + (float)x, 170 + (float)y}, (player2Name.length() > 6) ? 30:50, 1, PURPLE);}}}
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){1590, 170}, (player2Name.length() > 6) ? 30:50, 1, BLACK);
-        
+            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);}}}
+            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690, 190, 10, 40, screenWidth * 0.8f, BLACK);
+
             // Draw Score
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
@@ -937,27 +1228,192 @@ int main(void)
             if (x != 0 || y != 0) {
             DrawTextEx(arcadeFont, "Health: ", (Vector2){1590 + (float)x, 400 + (float)y}, 30, 1.0f, PURPLE);}}}
             DrawTextEx(arcadeFont, "Health: ", (Vector2){1590, 400}, 30, 1.0f, BLACK);
-            //DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, ORANGE);
-            //DrawTextEx(arcadeFont, "Health: ", {1590.0f, 400.0f}, 30.0f, 1.0f, PURPLE);
-
+            
             answerQUBtn.DrawButton();
             answerWIBtn.DrawButton();
             answerEOBtn.DrawButton();
             answerRPBtn.DrawButton();
 
-            // Draw Answers/Choices.
-            if (isAnswerQ_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, true);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 0 && wrongAnswersIndices[1] != 0 && wrongAnswerIndex != 0 && !isAnswerQ_Wrong) ? BLACK : RED, answerQ_Btn.position.x, answerQ_Btn.position.y, answerQ_Btn.width, answerQ_Btn.height, 600, true); 
+            // Player 1's answers
+            for (int i = 0; i < 4; i++) {
+            // If Player 1 has selected this answer, highlight it with an orange color
+            if (player1Answer == i) {
+            // Draw the highlight first (outline effect) using a small offset
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
+            if (i == 0) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, ORANGE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+            } else if (i == 1) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, ORANGE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+            } else if (i == 2) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, ORANGE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+            } else if (i == 3) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, ORANGE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}}
+            // Draw the actual answer in black for Player 1
+            if (i == 0) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
+            } else if (i == 1) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+            } else if (i == 2) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+            } else if (i == 3) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);}}
+
+            // Player 2's answers
+            for (int i = 0; i < 4; i++) {
+            // If Player 2 has selected this answer, highlight it with a PURPLE color
+            if (player2Answer == i) {
+            // Draw the highlight first (outline effect) using a small offset
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
+            if (i == 0) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, PURPLE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+            } else if (i == 1) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, PURPLE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+            } else if (i == 2) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, PURPLE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+            } else if (i == 3) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, PURPLE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}}
+            // Draw the actual answer in black for Player 2
+            if (i == 0) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
+            } else if (i == 1) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+            } else if (i == 2) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+            } else if (i == 3) {
+            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
+            25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);}}
             
-            if (isAnswerW_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, true);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 1 && wrongAnswersIndices[1] != 1 && wrongAnswerIndex != 1 && !isAnswerW_Wrong) ? BLACK : RED, answerW_Btn.position.x, answerW_Btn.position.y, answerW_Btn.width, answerW_Btn.height, 600, true);
+            //If both player got the wrong answer then it reveals the correct one
+            if (correctAnswer) {
+            // Draw the correct answer with green highlight (glow effect)
+            for (int x = -2; x <= 2; x++) { for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
+                switch (questions[currentQuestionIndex].correctAnswerIndex) {
+                    case 0:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+                    break;
+                    case 1:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                    break;
+                    case 2:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                    break;
+                    case 3:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                    break;
+                    // Handle invalid index (if necessary)
+                    default:
+                    break;}}}}
 
-            if (isAnswerE_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, true);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 2 && wrongAnswersIndices[1] != 2 && wrongAnswerIndex != 2 && !isAnswerE_Wrong) ? BLACK : RED, answerE_Btn.position.x, answerE_Btn.position.y, answerE_Btn.width, answerE_Btn.height, 600, true);
+                // Draw the correct answer in black (main text)
+                switch (questions[currentQuestionIndex].correctAnswerIndex) {
+                    case 0:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width,answerQUBtn.height, 600, false);
+                    break;
+                    case 1:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                    break;
+                    case 2:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                    break;
+                    case 3:
+                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                    break;
+                    // Handle invalid index (if necessary)
+                    default:
+                    break;
+                    }
+                }
 
-            if (isAnswerR_Correct) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, true);
-            else DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (wrongAnswersIndices[0] != 3 && wrongAnswersIndices[1] != 3 && wrongAnswerIndex != 3 && !isAnswerR_Wrong) ? BLACK : RED, answerR_Btn.position.x, answerR_Btn.position.y, answerR_Btn.width, answerR_Btn.height, 600, true);
+            // Display the message after answers are evaluated
+            if (!gameMessage.empty()) {
+                // Calculate the width of the text to center it
+                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage.c_str(), 30.0f, 1.0f);
+                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
+                float centerY = (GetScreenHeight() - 400);             // Vertical position (adjust as needed)
 
+                // Draw the green highlight first (outline effect) using a small offset
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                DrawTextEx(arcadeFont, gameMessage.c_str(), 
+                (Vector2){centerX + (float)x, centerY + (float)y}, 
+                30.0f, 1.0f, GREEN);}}}
+
+                // Then draw the actual message in black (on top of the green highlight)
+                DrawTextEx(arcadeFont, gameMessage.c_str(), 
+                (Vector2){centerX, centerY}, 
+                30.0f, 1.0f, BLACK);}
+
+            // Draw Timer at the start of the question
+            if (seconds > 0) {
+            DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50.0f, 1.0f, BLACK, 100.0f);
+            } else {
+            DrawTextHorizontal(arcadeFont, "Times Up!", 50.0f, 1.0f, RED, 100.0f);  // Display "Times Up!"
+            }
+
+            // Draw the current score
+            // Highlight Player 1's score with orange
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, TextFormat(" %i ", player1Score), (Vector2){250.0f + x, 350.0f + y}, 30.0f, 1.0f, ORANGE);}}}
+            DrawTextEx(arcadeFont, TextFormat(" %i ", player1Score), (Vector2){250.0f, 350.0f}, 30.0f, 1.0f, BLACK);
+            // Highlight Player 2's score with violet
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, TextFormat(" %i ", player2Score), (Vector2){1740.0f + x, 350.0f + y}, 30.0f, 1.0f, PURPLE);}}}
+            DrawTextEx(arcadeFont, TextFormat(" %i ", player2Score), (Vector2){1740.0f, 350.0f}, 30.0f, 1.0f, BLACK);
+
+            // Draw Health for Player 1
+            if (player1Healthpoints == 11) DrawTextureEx(health_11, {90.0f, 450.0f}, 0.0f, 0.5f, WHITE);
+            if (player1Healthpoints == 10) DrawTextureEx(health_10, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 9) DrawTextureEx(health_9, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 8) DrawTextureEx(health_8, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 7) DrawTextureEx(health_7, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 6) DrawTextureEx(health_6, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 5) DrawTextureEx(health_5, {90.0f, 450.0f}, 0.0f, 0.18f, WHITE);
+            if (player1Healthpoints == 4) DrawTextureEx(health_4, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 3) DrawTextureEx(health_3, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 2) DrawTextureEx(health_2, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player1Healthpoints == 1) DrawTextureEx(health_1, {90.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+
+            // Draw Health for Player 2
+            if (player2Healthpoints == 11) DrawTextureEx(health_11, {1580.0f, 450.0f}, 0.0f, 0.5f, WHITE);
+            if (player2Healthpoints == 10) DrawTextureEx(health_10, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 9) DrawTextureEx(health_9, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 8) DrawTextureEx(health_8, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 7) DrawTextureEx(health_7, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 6) DrawTextureEx(health_6, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 5) DrawTextureEx(health_5, {1580.0f, 450.0f}, 0.0f, 0.18f, WHITE);
+            if (player2Healthpoints == 4) DrawTextureEx(health_4, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 3) DrawTextureEx(health_3, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 2) DrawTextureEx(health_2, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+            if (player2Healthpoints == 1) DrawTextureEx(health_1, {1580.0f, 450.0f}, 0.0f, 0.15f, WHITE);
+
+            pauseBtn.DrawButton();
+            break;
+        case LEADERBOARDS:
+            DrawTexture(leaderBoardBackground, 0, 0 , WHITE);
             pauseBtn.DrawButton();
             break;
         case SETTINGS:
@@ -980,41 +1436,40 @@ int main(void)
             DrawTexture(controlScreen2, 0,0,WHITE);
              DrawTextHorizontal(arcadeFont, "Press any button to proceed", 30, 1, WHITE, GetScreenHeight() - 200);
             if (timer > inputCooldown) {
-                if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-                    currentScreen = PLAYERNAME;
-                }
-            }
+            if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+            currentScreen = PLAYERNAME;
+            }}
             break;
         case PLAYERNAME:
             DrawTexture(enterPlayerName, 0, 0, WHITE);
             playerNameBoxBtn.DrawButton();
             playerNameBox1Btn.DrawButton();
-                //Player 1 name input
-                for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) {
-                DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840 + (float)x, 455 + (float)y}, 30, 1, ORANGE);}}}
-                DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840, 455}, 30, 1, BLACK);
-                if (enteringPlayer1Name){
-                        for (int x = -2; x <= 2; x++) {
-                        for (int y = -2; y <= 2; y++) {
-                        if (x != 0 || y != 0) {
-                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 540 + (float)y}, 20, 1.0f, ORANGE);}}}
-                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 540}, 20, 1.0f, BLACK);}
-                //Player 2 name input        
-                for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) {
-                DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840 + (float)x, 620 + (float)y}, 30, 1, PURPLE);}}}
-                DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840, 620}, 30, 1, BLACK);
-                if (enteringPlayer2Name){
-                        for (int x = -2; x <= 2; x++) {
-                        for (int y = -2; y <= 2; y++) {
-                        if (x != 0 || y != 0) {
-                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 705 + (float)y}, 20, 1.0f, PURPLE);}}}
-                        DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 705}, 20, 1.0f, BLACK);}
+            //Player 1 name input
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840 + (float)x, 455 + (float)y}, 30, 1, ORANGE);}}}
+            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840, 455}, 30, 1, BLACK);
+            if (enteringPlayer1Name){
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 540 + (float)y}, 20, 1.0f, ORANGE);}}}
+            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 540}, 20, 1.0f, BLACK);}
+            //Player 2 name input        
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840 + (float)x, 620 + (float)y}, 30, 1, PURPLE);}}}
+            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840, 620}, 30, 1, BLACK);
+            if (enteringPlayer2Name){
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 705 + (float)y}, 20, 1.0f, PURPLE);}}}
+            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 705}, 20, 1.0f, BLACK);}
 
-                DrawTextHorizontal(arcadeFont, "Press ENTER to start", 30, 1, WHITE, GetScreenHeight() - 200);
+            DrawTextHorizontal(arcadeFont, "Press ENTER to start", 30, 1, WHITE, GetScreenHeight() - 200);
             break;
         case PAUSE:
             DrawTexture(singleplayerBackground, 0, 0,WHITE);
@@ -1047,6 +1502,74 @@ int main(void)
             mainMenuBtn.position.y = 595.0f;
 
             break;
+        case GAMEOVER1:
+            DrawTexture(gameoverBackground, 0, 0, WHITE);
+
+            // Display the message after answers are evaluated
+            if (!gameMessage.empty()) {
+                // Calculate the width of the text to center it
+                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage.c_str(), 75.0f, 1.0f);
+                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
+                float centerY = (GetScreenHeight() - 750);             // Vertical position (adjust as needed)
+                // Draw the green highlight first (outline effect) using a small offset
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                DrawTextEx(arcadeFont, gameMessage.c_str(), 
+                (Vector2){centerX + (float)x, centerY + (float)y}, 
+                75.0f, 1.0f, BLACK);}}}
+                // Then draw the actual message in black (on top of the green highlight)
+                DrawTextEx(arcadeFont, gameMessage.c_str(), 
+                (Vector2){centerX, centerY}, 
+                75.0f, 1.0f, YELLOW);}
+                
+            if (!gameMessage1.empty()) {
+                // Calculate the width of the text to center it
+                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f);
+                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
+                float centerY = (GetScreenHeight() - 660);             // Vertical position (adjust as needed)
+                // Draw the green highlight first (outline effect) using a small offset
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                DrawTextEx(arcadeFont, gameMessage1.c_str(), 
+                (Vector2){centerX + (float)x, centerY + (float)y}, 
+                30.0f, 1.0f, BLACK);}}}
+                // Then draw the actual message in black (on top of the green highlight)
+                DrawTextEx(arcadeFont, gameMessage1.c_str(), 
+                (Vector2){centerX, centerY}, 
+                30.0f, 1.0f, YELLOW);}
+
+            if (!gameMessage2.empty()) {
+                // Calculate the width of the text to center it
+                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f);
+                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
+                float centerY = (GetScreenHeight() - 610);             // Vertical position (adjust as needed)
+                // Draw the green highlight first (outline effect) using a small offset
+                for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                DrawTextEx(arcadeFont, gameMessage2.c_str(), 
+                (Vector2){centerX + (float)x, centerY + (float)y}, 
+                30.0f, 1.0f, BLACK);}}}
+
+                // Then draw the actual message in black (on top of the green highlight)
+                DrawTextEx(arcadeFont, gameMessage2.c_str(), 
+                (Vector2){centerX, centerY}, 
+                30.0f, 1.0f, YELLOW);}
+
+            leaderboardsBtn.DrawButtonHorizontal();
+            leaderboardsBtn.position.y = 580.0f;
+            restartBtn.DrawButtonHorizontal();
+            restartBtn.imgScale = 0.75f;
+            restartBtn.position.y = 670.0f;
+            mainMenuBtn.DrawButtonHorizontal();
+            mainMenuBtn.imgScale = 0.80f;
+            mainMenuBtn.position.y = 760.0f;
+            exitBtn.DrawButtonHorizontal();
+            exitBtn.imgScale = 0.53f;
+            exitBtn.position.y = 850.0f;
+            
         default:
             break;
         }
