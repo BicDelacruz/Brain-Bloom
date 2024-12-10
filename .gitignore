@@ -1,3 +1,4 @@
 *.dsym
 *.bin
+*.dat
 main

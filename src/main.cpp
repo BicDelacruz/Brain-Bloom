@@ -97,7 +97,7 @@ void DrawQuestionText(Font font, const char* text, int maxWidth, int screenWidth
         // Measure and center the line horizontally
         int lineWidth = MeasureTextEx(font, line.c_str(), fontSize, 1).x;
         float posX = (screenWidth - lineWidth) / 2;
-        DrawTextEx(font, line.c_str(), (Vector2){(float)posX, (isMultiplayer) ? posY - 120: posY - 100}, fontSize, 1, color);
+        DrawTextEx(font, line.c_str(), {posX, (isMultiplayer) ? posY - 120: posY - 100}, fontSize, 1, color);
         posY += fontSize; // Move to the next line
     }
 }
@@ -207,7 +207,6 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
         }
     }
 }
-
 
 // Save highscore to a binary file
 void SaveHighScore(const char* filename, int value) {
