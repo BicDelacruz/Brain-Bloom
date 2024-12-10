@@ -20,6 +20,7 @@
 #define MAX_NAME_LENGTH 50
 #define MAX_LEADERBOARD_SIZE 10
 #define DATA_FILE_PATH "data/data.bin" 
+#define LEADERBOARD_FILE_PATH "data/leaderboard.dat" 
 
 // Screen manager, based on an example from the raylib website
 typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, GAMEOVER1, CONTROLS1, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
@@ -238,7 +239,7 @@ Player leaderboard[MAX_LEADERBOARD_SIZE];
 
 // Save leaderboard to a binary file
 void SaveLeaderboard() {
-    FILE *file = fopen("leaderboard.dat", "wb");
+    FILE *file = fopen(LEADERBOARD_FILE_PATH, "wb");
     if (file != NULL) {
         fwrite(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
         fclose(file);
@@ -247,7 +248,7 @@ void SaveLeaderboard() {
 
 // Load leaderboard from the binary file
 void LoadLeaderboard() {
-    FILE *file = fopen("leaderboard.dat", "rb");
+    FILE *file = fopen(LEADERBOARD_FILE_PATH, "rb");
     if (file != NULL) {
         fread(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
         fclose(file);
