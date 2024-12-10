@@ -1580,7 +1580,7 @@ int main(void)
             for (int i = 0; i < MAX_LEADERBOARD_SIZE; i++) {
                 char scoreText[100];
                 snprintf(scoreText, sizeof(scoreText), "%d. %s - %d", i + 1, leaderboard[i].name, leaderboard[i].score);
-                DrawText(scoreText, 700, 600 + i * 30, 20, BLACK);  // Adjust position as needed
+                DrawText(scoreText, 750, 450 + i * 40, 30, BLACK);  // Adjust position as needed
             }
             break;
         case SETTINGS:
