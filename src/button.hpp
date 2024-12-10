@@ -7,7 +7,7 @@ class Button {
         ~Button();
         void DrawButton();
         void DrawButtonHorizontal();
-        bool isClicked(Vector2 mousePos, bool mousePressed);
+        bool isClicked(Vector2 mousePos, bool mousePressed), isDrawnHorizontal;
         float imgScale, width, height;
         Vector2 position;
     private:

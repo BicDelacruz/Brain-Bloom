@@ -4,7 +4,6 @@
 *   Add main menu background animation
 *   Change timer font
 *   Complete settings (UI, options for window size, audio)
-*   Implemet highscore (only for singleplayer?) and/or leaderboards (only in multiplayer?)
 *   Cosmetics (cursor skins when player reaches a highscore)
 *   Audio (for buttons and etc.)
 *   Implement loading screen
@@ -13,12 +12,15 @@
 
 #include <vector>
 #include <string>
+#include <fstream>
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
 #include <ctime>
 #include <thread>
 #include <chrono>
+
+#define DATA_FILE_PATH "data/data.bin" 
 
 // Screen manager, based on an example from the raylib website
 typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, GAMEOVER1, CONTROLS1, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
@@ -208,6 +210,27 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
 }
 
 
+// Save highscore to a binary file
+void SaveHighScore(const char* filename, int value) {
+    std::ofstream outFile(filename, std::ios::binary);
+    if (outFile.is_open()) {
+        outFile.write(reinterpret_cast<const char*>(&value), sizeof(value));
+        outFile.close();
+    }
+}
+
+// Load highscore from a binary file. Will create a new .bin file if not existing
+int LoadHighScore(const char* filename) {
+    int value = 0;
+    std::ifstream inFile(filename, std::ios::binary);
+    if (inFile.is_open()) {
+        inFile.read(reinterpret_cast<char*>(&value), sizeof(value));
+        inFile.close();
+    }
+    return value;
+}
+
+
 //------------------------------------------------------------------------------------
 // Program main entry point
 //------------------------------------------------------------------------------------
@@ -221,6 +244,7 @@ int main(void)
     int screenWidth = 1920;
     int screenHeight = 1080;
     InitWindow(screenWidth, screenHeight, "BRAIN BLOOM");
+    InitAudioDevice();
 
     // Game launches at fullscreen, can be changed in the games' settings, uncomment out when game is finished
     //ToggleFullscreen();                   
@@ -259,6 +283,8 @@ int main(void)
     bool isAnswerR_Wrong = false;
     bool answerSelected = false;
 
+    bool exitFromGameover = false;
+
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;           // Reset to 0.0f ater each use
@@ -273,6 +299,7 @@ int main(void)
     int currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
     int selectedAnswerIndex = -1;
     int score = 0;
+    int highscore = LoadHighScore(DATA_FILE_PATH);
     int healthPoints = 10;
     int wrongAnswerIndex;
 
@@ -362,7 +389,20 @@ int main(void)
         }
     };
 
-    Font arcadeFont = LoadFont("fonts/arcade.ttf");
+    Font arcadeFont = LoadFont("assets/fonts/arcade.ttf");
+
+    Music mainMenuMusic = LoadMusicStream("assets/sounds/Flim.mp3");
+    Music singleplayerMusic = LoadMusicStream("assets/sounds/singleplayer-music.mp3");
+    Music singleplayerLowHealthMusic = LoadMusicStream("assets/sounds/low-health.mp3");
+
+    Sound menuButtonsSound = LoadSound("assets/sounds/button_click.mp3");
+    Sound correctAnswerSound = LoadSound("assets/sounds/correct_answer.mp3");
+    Sound wrongAnswerSound = LoadSound("assets/sounds/wrong_answer.mp3");
+    Sound gameoverSound = LoadSound("assets/sounds/gameover.mp3");
+    Sound timesUpSound = LoadSound("assets/sounds/no-time-left.mp3");
+    SetSoundVolume(timesUpSound, 0.5f);
+    Sound countdownSound = LoadSound("assets/sounds/3s-countdown.mp3");
+    SetSoundVolume(countdownSound, 0.3f);
 
     // Main Menu Textures
     Texture2D titleLogo = LoadTexture("assets/title-logo.png");
@@ -408,9 +448,9 @@ int main(void)
     Button twoPlayerBtn{"assets/two-players-btn.png", {0.0f, 650.0f}, 0.5f};
     Button yesBtn{"assets/exit-yes-btn.png", {0.0f, 600.0f}, 0.8f};
     Button noBtn{"assets/exit-no-btn.png", {0.0f, 700.0f}, 0.8f};
-    Button settingsBtn{"assets/settings-btn.png", {0, 620.0f}, 0.6f};
-    Button startBtn{"assets/start-btn.png", {0, 500.0f}, 0.6f};
-    Button exitBtn{"assets/exit-btn.png", {0, 730.0f}, 0.6f};
+    Button settingsBtn{"assets/settings-btn.png", {0.0f, 620.0f}, 0.6f};
+    Button startBtn{"assets/start-btn.png", {0.0f, 500.0f}, 0.6f};
+    Button exitBtn{"assets/exit-btn.png", {0.0f, 730.0f}, 0.6f};
 
     // Pause & Gameover Buttons 
     Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
@@ -441,19 +481,20 @@ int main(void)
     Color pauseDark = {0,0,0, 100};
 
     //--------------------------------------------------------------------------------------
-
-    
     // Main game loop
     while (!WindowShouldClose() && !exitConfirmed)
     {  
         float deltaTime = GetFrameTime();
 
-        
         Vector2 mousePosition = GetMousePosition();
         bool mouseClicked = IsMouseButtonPressed(MOUSE_BUTTON_LEFT); 
-        
+
         switch(currentScreen) {
             case MAIN_MENU:
+
+                if (!IsMusicStreamPlaying(mainMenuMusic)) PlayMusicStream(mainMenuMusic); // Play main menu music
+                if (IsMusicStreamPlaying(singleplayerMusic)) StopMusicStream(singleplayerMusic); // Stop singleplayer music
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 
                 // Reset variables
                 ResetGameVariables();
@@ -474,29 +515,41 @@ int main(void)
 
                 exitBtn.imgScale = 0.6f;
                 exitBtn.position.y = 730.0f;
-                
+
                 if (startBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = STARTGAME;
+                    PlaySound(menuButtonsSound);
                 }
-                if (settingsBtn.isClicked(mousePosition, mouseClicked)) currentScreen = SETTINGS;
-                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;   
+                if (settingsBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = SETTINGS;
+                    PlaySound(menuButtonsSound);
+                }
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = EXIT;
+                    PlaySound(menuButtonsSound);
+                }   
             break;
             case STARTGAME:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES;
                     singlePLayerSelected = true;
+                    PlaySound(menuButtonsSound);
                 }
                 if (twoPlayerBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = RULES1;
                     singlePLayerSelected = false;
+                    PlaySound(menuButtonsSound);
                 }
                 break;
             case SETTINGS:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 if (IsKeyPressed(KEY_ESCAPE)) {
                     currentScreen = MAIN_MENU;
                 }
                 break;
             case RULES:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
                 if (timer > inputCooldown) {
@@ -519,6 +572,7 @@ int main(void)
                 }
                 break;
             case CONTROLS1:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
                 if (timer > inputCooldown) {
@@ -566,15 +620,32 @@ int main(void)
                 }
                 break;
             case READY:
+
                 if (GetTime() - startTime >= 1.0) {
                 countdownTime--;
                 startTime = GetTime();}
 
                 if (countdownTime < 0) countdownTime = 0;
                 
+
+
+                if (IsMusicStreamPlaying(mainMenuMusic)) {
+                    StopMusicStream(mainMenuMusic);
+                    PlaySound(countdownSound);
+                } 
+
+                if (GetTime() - startTime >= 1.0) {
+                    countdownTime--;
+                    startTime = GetTime();
+                }
+
+                if (countdownTime < 0) countdownTime = 0;
+        
+
                 seconds = countdownTime % 60;
 
                 timer += deltaTime;
+
                 if (timer >= 3.0f) {
                     currentScreen = (singlePLayerSelected) ? SINGLEPLAYER : MULTIPLAYER;
                     countdownTime = 20;
@@ -582,6 +653,7 @@ int main(void)
                 }
                 break;
             case SINGLEPLAYER:
+
                 if (GetTime() - startTime >= 1.0) {
                 countdownTime--;
                 startTime = GetTime();}
@@ -591,6 +663,23 @@ int main(void)
                 seconds = countdownTime % 60;
 
                 
+
+                if (!IsMusicStreamPlaying(singleplayerMusic)) {
+                    PlayMusicStream(singleplayerMusic);
+                }
+                 
+                UpdateMusicStream(singleplayerMusic);  // Update music stream to continue playing it
+
+                if (GetTime() - startTime >= 1.0) {
+                    countdownTime--;
+                    startTime = GetTime();
+                }
+
+                if (countdownTime < 0) countdownTime = 0;
+        
+                seconds = countdownTime % 60;
+
+
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
                     selectedAnswerIndex = 0;
@@ -622,17 +711,22 @@ int main(void)
                         isAnswerCorrect = true;
                         score++;
                         selectedAnswerIndex = -1;
+                        PlaySound(correctAnswerSound);
                     } else {
                         isAnswerCorrect = false;
                         healthPoints--;
                         selectedAnswerIndex = -1;
+                        PlaySound(wrongAnswerSound);
                     }
                 }
+
+                if (seconds == 1) PlaySound(timesUpSound);
 
                 if (seconds == 0) {    // If time runs out:
                     timer += deltaTime;
                     selectedAnswerIndex = -1;
                     enableInput = false;
+                    addHealthPoint = false;
 
                     // Gives time to draw and show "Times Up!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
@@ -667,56 +761,51 @@ int main(void)
                     timer += deltaTime;
                     enableInput = false;
                     
-                    // Gives time to draw and show "Correct!" text, dissapears after 1.5 seconds and draws the timer again
+                    // Gives time to draw  "Incorrect!" text, dissapears after 1.5 seconds and draws the timer again
                     if (timer > 1.5f) {
-
-                        if (addHealthPoint) healthPoints++;
                         addHealthPoint = false;
-    
-                        if (skipQuestion) {
-                            score++;
-                            abilityS_Used = true;                       
-                        }
-
-                        skipQuestion = false;
-
                         ResetGameVariables();
                     }
+                }
+
+                if (healthPoints == 1) {
+                    StopMusicStream(singleplayerMusic);
+                    PlayMusicStream(singleplayerLowHealthMusic);
+                    UpdateMusicStream(singleplayerLowHealthMusic);
                 }
 
                 if (healthPoints <= 0) currentScreen = GAMEOVER;
 
                 // Pause
-                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
+                    PlaySound(menuButtonsSound);
                     previousScreen = SINGLEPLAYER;
                     currentScreen = PAUSE;
                 }
-                if (IsKeyPressed(KEY_ESCAPE)) {
-                    previousScreen = SINGLEPLAYER;
-                    currentScreen = PAUSE;
-                }
+
                 // Remove 2 wrong answers
-                if ((!abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityA_Used && IsKeyPressed(KEY_A))) {
+                if ((enableInput && !abilityA_Used && abilityA_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityA_Used && IsKeyPressed(KEY_A))) {
                     wrongAnswersIndices = GetTwoWrongAnswersIndices(questions[currentQuestionIndex].correctAnswerIndex);
                     abilityA_Used = true;
                 }
                 // Skip question
-                if ((!abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityS_Used && IsKeyPressed(KEY_S))) {
+                if ((enableInput && !abilityS_Used && abilityS_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityS_Used && IsKeyPressed(KEY_S))) {
                     skipQuestion = true; 
                     abilityS_Used = true;
                 }
                 // Gain 1 health point if question is answered correctly
-                if ((!abilityD_Used && abilityD_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityD_Used && IsKeyPressed(KEY_D))) {
+                if ((enableInput && !abilityD_Used && abilityD_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityD_Used && IsKeyPressed(KEY_D))) {
                     addHealthPoint = true;
                     abilityD_Used = true;
                 }
                 // Remove 1 wrong option
-                if ((!abilityF_Used && abilityF_Btn.isClicked(mousePosition, mouseClicked)) || (!abilityF_Used && IsKeyPressed(KEY_F))) {
+                if ((enableInput && !abilityF_Used && abilityF_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && !abilityF_Used && IsKeyPressed(KEY_F))) {
                     wrongAnswerIndex = GetOneWrongAnswerIndex(questions[currentQuestionIndex].correctAnswerIndex);
                     abilityF_Used = true;
                 }
                 break;
             case MULTIPLAYER:
+
                 if (GetTime() - startTime >= 1.0) {
                     countdownTime--;
                     startTime = GetTime();}
@@ -752,6 +841,14 @@ int main(void)
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
                     }
+
+                if (IsMusicStreamPlaying(mainMenuMusic)) StopMusicStream(mainMenuMusic);
+
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
+                    PlaySound(menuButtonsSound);
+                    currentScreen = PAUSE;
+                    previousScreen = MULTIPLAYER;
+
                 }
 
                 // Handle Player 2 input (U, I, O, P keys)
@@ -874,23 +971,57 @@ int main(void)
             case PAUSE:
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = MAIN_MENU;
+                    PlaySound(menuButtonsSound);
                 }
                 if (resumeBtn.isClicked(mousePosition, mouseClicked)) {
+
                     currentScreen = previousScreen;
+
+                    currentScreen = previousScreen; 
+                    PlaySound(menuButtonsSound);
+
                 }
                 else if (IsKeyPressed(KEY_ESCAPE)) {
                     currentScreen = previousScreen;
                 }
                 break;
             case EXIT:
-                if (yesBtn.isClicked(mousePosition, mouseClicked)) exitConfirmed = true;
-                if (noBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
+                if (!exitFromGameover) UpdateMusicStream(mainMenuMusic);
+                if (yesBtn.isClicked(mousePosition, mouseClicked)) {
+                    PlaySound(menuButtonsSound);
+                    exitConfirmed = true;
+                }
+                if (noBtn.isClicked(mousePosition, mouseClicked)) {
+                    currentScreen = (exitFromGameover) ? GAMEOVER:MAIN_MENU;  // Returns to GAMEOVER screen when player clicks no, if in the GAMEOVER screen
+                    exitFromGameover = false;
+                    PlaySound(menuButtonsSound);
+                }
                 break;
             case GAMEOVER:
-                if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
-                if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
+                if (IsMusicStreamPlaying(singleplayerMusic) || IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
+                    StopMusicStream(singleplayerMusic); // Stop singleplayer music
+                    StopMusicStream(singleplayerLowHealthMusic); // Stop singleplayer music
+                    PlaySound(gameoverSound);
+                }
+
+                if (!IsMusicStreamPlaying(mainMenuMusic)) PlayMusicStream(mainMenuMusic);
+
+                if (score > highscore) {
+                    highscore = score;
+                    SaveHighScore(DATA_FILE_PATH, highscore);
+                }
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
+                    PlaySound(menuButtonsSound);
+                    currentScreen = MAIN_MENU;
+                }
+                if (exitBtn.isClicked(mousePosition, mouseClicked)) {
+                    PlaySound(menuButtonsSound);
+                    currentScreen = EXIT;
+                    exitFromGameover = true;
+                }
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     ResetGameVariables();
+
                     currentScreen = RULES; } 
                 break;
             case GAMEOVER1:
@@ -939,6 +1070,11 @@ int main(void)
                     currentScreen = PAUSE;
                 }
                 break;
+
+                    currentScreen = RULES;   
+                    PlaySound(menuButtonsSound);
+                }
+
             default:
                 break;
         }
@@ -957,7 +1093,7 @@ int main(void)
             DrawTextureEx(fiveHearts, (Vector2){755, 70}, 0.0f, 0.3, WHITE);
             startBtn.DrawButtonHorizontal();
             settingsBtn.DrawButtonHorizontal();
-            exitBtn.DrawButtonHorizontal();
+            exitBtn.DrawButtonHorizontal();        
             break;
         case STARTGAME:
             DrawTexture(startGameBackground, 0,0, WHITE);
@@ -1013,7 +1149,7 @@ int main(void)
             DrawTextEx(arcadeFont, TextFormat("Score: %i", score), {100.0f, 350.0f}, 30.0f, 1.0f, BLACK);
 
             // Draw Health
-            DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, BLACK);
+            DrawTextEx(arcadeFont, "Health: ", {100.0f, 400.0f}, 30.0f, 1.0f, (healthPoints == 1) ? RED:BLACK);
             if (healthPoints == 11) DrawTextureEx(health_11, {100.0f, 450.0f}, 0.0f, 0.5f, WHITE);
             if (healthPoints == 10) DrawTextureEx(health_10, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
             if (healthPoints == 9) DrawTextureEx(health_9, {100.0f, 450.0f}, 0.0f, 0.15f, WHITE);
@@ -1351,15 +1487,20 @@ int main(void)
             break;
         case GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
+
+            DrawTextHorizontal(arcadeFont, TextFormat("Score: %i", score), 50.0f, 1.0f, BLACK, 300.0f);
+            DrawTextHorizontal(arcadeFont, TextFormat("High Score: %i", highscore), 50.0f, 1.0f, ORANGE, 400.0f);
+
             restartBtn.DrawButtonHorizontal();
-            restartBtn.imgScale = 0.90f;
-            restartBtn.position.y = 500.0f;
+
             exitBtn.DrawButtonHorizontal();
             exitBtn.imgScale = 0.53f;
             exitBtn.position.y = 700.0f;
+
             mainMenuBtn.DrawButtonHorizontal();
             mainMenuBtn.imgScale = 0.80f;
             mainMenuBtn.position.y = 595.0f;
+
             break;
         case GAMEOVER1:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
@@ -1443,6 +1584,15 @@ int main(void)
     // TODO: Unload all loaded data (textures, fonts, audio) here!
     
     UnloadFont(arcadeFont);
+    UnloadMusicStream(mainMenuMusic);
+    UnloadMusicStream(singleplayerMusic);
+    UnloadMusicStream(singleplayerLowHealthMusic);
+    UnloadSound(menuButtonsSound);
+    UnloadSound(wrongAnswerSound);
+    UnloadSound(correctAnswerSound);
+    UnloadSound(gameoverSound);
+    UnloadSound(timesUpSound);
+    UnloadSound(countdownSound);
     UnloadTexture(menuBackground);
     UnloadTexture(titleLogo);
     UnloadTexture(pausedTxt);
@@ -1468,6 +1618,7 @@ int main(void)
     UnloadTexture(abilityD_Used_Texture);
     UnloadTexture(abilityF_Used_Texture);
 
+    CloseAudioDevice();
     CloseWindow();  // Close window and OpenGL context
     //--------------------------------------------------------------------------------------
 
