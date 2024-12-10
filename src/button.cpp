@@ -32,6 +32,7 @@ void Button::DrawButton(void) {
     DrawTextureV(texture, position, WHITE);
 }
 
+// Draw Button and Center it Horizontally
 void Button::DrawButtonHorizontal(void) {
     isDrawnHorizontal = true;
     position.x = (float) ((GetScreenWidth() - width * imgScale) / 2);

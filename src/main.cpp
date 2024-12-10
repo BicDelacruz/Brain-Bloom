@@ -1,13 +1,7 @@
 /*****************************************************************************
-*   TODO:
-*   Add multiplayer (screen, mechanics, make user input two names, etc)
-*   Add main menu background animation
-*   Change timer font
-*   Complete settings (UI, options for window size, audio)
-*   Cosmetics (cursor skins when player reaches a highscore)
-*   Audio (for buttons and etc.)
-*   Implement loading screen
-*   Clean code up and remove redundancy (make variables global)
+*   
+*   https://github.com/BicDelacruz/Brain-Bloom
+*
 *****************************************************************************/
 
 #include <vector>
@@ -285,6 +279,9 @@ int main(void)
 
     bool exitFromGameover = false;
 
+    bool muteMusic = false;
+    bool muteUi = false;
+
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
     float timer = 0.0f;           // Reset to 0.0f ater each use
@@ -389,6 +386,7 @@ int main(void)
         }
     };
 
+
     Font arcadeFont = LoadFont("assets/fonts/arcade.ttf");
 
     Music mainMenuMusic = LoadMusicStream("assets/sounds/Flim.mp3");
@@ -405,6 +403,22 @@ int main(void)
     Sound countdownSound = LoadSound("assets/sounds/3s-countdown.mp3");
     SetSoundVolume(countdownSound, 0.3f);
 
+    auto SetMute = [&](bool muteMusic, bool muteUi) {
+        float musicVolume = muteMusic ? 0.0f : 1.0f;
+        float uiVolume = muteUi ? 0.0f : 1.0f;
+
+        SetMusicVolume(singleplayerMusic, musicVolume);
+        SetMusicVolume(singleplayerLowHealthMusic, musicVolume);
+        SetMusicVolume(mainMenuMusic, musicVolume);
+
+        SetSoundVolume(menuButtonsSound, uiVolume);
+        SetSoundVolume(wrongAnswerSound, uiVolume);
+        SetSoundVolume(correctAnswerSound, uiVolume);
+        SetSoundVolume(gameoverSound, uiVolume);
+        SetSoundVolume(timesUpSound, muteUi ? 0.0f : 0.5f);
+        SetSoundVolume(countdownSound, muteUi ? 0.0f : 0.3f);
+    };
+
     // Main Menu Textures
     Texture2D titleLogo = LoadTexture("assets/title-logo.png");
     Texture2D menuBackground = LoadTexture("assets/main-menu-bg.png");
@@ -416,6 +430,7 @@ int main(void)
     Texture2D startGameBackground = LoadTexture("assets/start-game-bg.png");
     Texture2D exitBackground = LoadTexture("assets/exit-bg.png");
     Texture2D readyScreen = LoadTexture("assets/ready-screen.png");
+    Texture2D soundIcon = LoadTexture("assets/sound-ic.png");
 
     // Singleplayer Textures
     Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
@@ -452,6 +467,12 @@ int main(void)
     Button settingsBtn{"assets/settings-btn.png", {0.0f, 620.0f}, 0.6f};
     Button startBtn{"assets/start-btn.png", {0.0f, 500.0f}, 0.6f};
     Button exitBtn{"assets/exit-btn.png", {0.0f, 730.0f}, 0.6f};
+
+    //Settings Buttons
+    Button muteUiFalse{"assets/mute-ui-false.png", {0, 300}, 1.0f};
+    Button muteUiTrue{"assets/mute-ui-true.png", {0, 300}, 1.0f};
+    Button muteMusicFalse{"assets/mute-music-false.png", {0, 450}, 1.0f};
+    Button muteMusicTrue{"assets/mute-music-true.png", {0, 450}, 1.0f};
 
     // Pause & Gameover Buttons 
     Button pauseBtn{"assets/pause-btn.png", {10.0f, 10.0f}, 0.7f};
@@ -517,6 +538,9 @@ int main(void)
                 exitBtn.imgScale = 0.6f;
                 exitBtn.position.y = 730.0f;
 
+                mainMenuBtn.imgScale = 0.6f;
+                mainMenuBtn.position.y = 620.0f;
+
                 if (startBtn.isClicked(mousePosition, mouseClicked)) {
                     currentScreen = STARTGAME;
                     PlaySound(menuButtonsSound);
@@ -545,8 +569,29 @@ int main(void)
                 break;
             case SETTINGS:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
-                if (IsKeyPressed(KEY_ESCAPE)) {
+                if (mainMenuBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     currentScreen = MAIN_MENU;
+                    PlaySound(menuButtonsSound);
+                }
+                if (muteMusicFalse.isClicked(mousePosition, mouseClicked)) {
+                    muteMusic = true;
+                    SetMute(muteMusic, muteUi);
+                    PlaySound(menuButtonsSound);
+                }
+                if (muteUiFalse.isClicked(mousePosition, mouseClicked)) {
+                    muteUi = true;
+                    SetMute(muteMusic, muteUi);
+                    PlaySound(menuButtonsSound);
+                }
+                if (muteMusicTrue.isClicked(mousePosition, mouseClicked)) {
+                    muteMusic = false;
+                    SetMute(muteMusic, muteUi);
+                    PlaySound(menuButtonsSound);
+                }
+                if (muteUiTrue.isClicked(mousePosition, mouseClicked)) {
+                    muteUi = false;
+                    SetMute(muteMusic, muteUi);
+                    PlaySound(menuButtonsSound);
                 }
                 break;
             case RULES:
@@ -629,8 +674,6 @@ int main(void)
                 startTime = GetTime();}
 
                 if (countdownTime < 0) countdownTime = 0;
-                
-
 
                 if (IsMusicStreamPlaying(mainMenuMusic)) {
                     StopMusicStream(mainMenuMusic);
@@ -644,7 +687,6 @@ int main(void)
 
                 if (countdownTime < 0) countdownTime = 0;
         
-
                 seconds = countdownTime % 60;
 
                 timer += deltaTime;
@@ -665,8 +707,6 @@ int main(void)
                 
                 seconds = countdownTime % 60;
 
-                
-
                 if (!IsMusicStreamPlaying(singleplayerMusic)) {
                     PlayMusicStream(singleplayerMusic);
                 }
@@ -681,7 +721,6 @@ int main(void)
                 if (countdownTime < 0) countdownTime = 0;
         
                 seconds = countdownTime % 60;
-
 
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
@@ -1075,11 +1114,7 @@ int main(void)
                 break;
             case LEADERBOARDS:
                 // Pause
-                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
-                    previousScreen = LEADERBOARDS;
-                    currentScreen = PAUSE;
-                }
-                if (IsKeyPressed(KEY_ESCAPE)) {
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     previousScreen = LEADERBOARDS;
                     currentScreen = PAUSE;
                 }
@@ -1428,6 +1463,36 @@ int main(void)
             break;
         case SETTINGS:
             DrawTexture(settingsBackground, 0, 0 , WHITE);
+
+            mainMenuBtn.imgScale = 0.9f;
+            mainMenuBtn.position.y = 700.0f;
+            mainMenuBtn.DrawButtonHorizontal();
+
+            DrawTextHorizontal(arcadeFont, "Main Menu Music: Flim - Aphex Twin", 30.0f, 0.5f, BLACK, 100.0f);
+            DrawTextHorizontal(arcadeFont, "Copyright Sounds and Music From: https://www.zapsplat.com", 30.0f, 0.5f, BLACK, 200.0f);
+
+           if (muteUi) {
+                muteUiFalse.position.y = 0;
+                muteUiTrue.position.y = 300;
+                muteUiTrue.DrawButtonHorizontal();
+            } 
+            else {
+                muteUiTrue.position.y = 0;
+                muteUiFalse.position.y = 300;
+                muteUiFalse.DrawButtonHorizontal();
+            }
+
+            if (muteMusic) {
+                muteMusicFalse.position.y = 0;
+                muteMusicTrue.position.y = 450;
+                muteMusicTrue.DrawButtonHorizontal();
+            } 
+            else {
+                muteMusicTrue.position.y = 0;
+                muteMusicFalse.position.y = 450;
+                muteMusicFalse.DrawButtonHorizontal();
+            }
+
             break;
         case READY:
             DrawTexture(readyScreen, 0, 0, WHITE);
@@ -1612,6 +1677,7 @@ int main(void)
     UnloadTexture(exitBackground);
     UnloadTexture(readyScreen);
     UnloadTexture(gameoverBackground);
+    UnloadTexture(soundIcon);
     UnloadTexture(health_1);
     UnloadTexture(health_2);
     UnloadTexture(health_3);
