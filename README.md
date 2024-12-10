@@ -32,5 +32,11 @@ Pre-Alpha:
 12/8/2024
 - Multiplayer functionalities added
 - Multiple bugs to be fixed
+
+12/10/2024
+- Multiplayer Finished
+- Leaderboards screen finished
+- Leaderboards mechanism to be added
+- Multiplayer music to be added
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ![Alt text](/assets/title-logo.png "Brain Bloom")
