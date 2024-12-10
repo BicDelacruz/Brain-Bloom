@@ -393,6 +393,7 @@ int main(void)
 
     Music mainMenuMusic = LoadMusicStream("assets/sounds/Flim.mp3");
     Music singleplayerMusic = LoadMusicStream("assets/sounds/singleplayer-music.mp3");
+    Music multiplayerMusic = LoadMusicStream("assets/sounds/multiplayer-music.mp3");
     Music singleplayerLowHealthMusic = LoadMusicStream("assets/sounds/low-health.mp3");
 
     Sound menuButtonsSound = LoadSound("assets/sounds/button_click.mp3");
@@ -561,6 +562,7 @@ int main(void)
                 }
                 break;
             case RULES1:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
                 if (timer > inputCooldown) {
@@ -584,6 +586,7 @@ int main(void)
                 }
                 break;
             case PLAYERNAME:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 countdownTime = 4;
                 if (!namesEntered) {
                     if (playerNameBoxBtn.isClicked(mousePosition, mouseClicked)) {
@@ -770,9 +773,11 @@ int main(void)
 
                 if (healthPoints == 1) {
                     StopMusicStream(singleplayerMusic);
+                    if (!IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
                     PlayMusicStream(singleplayerLowHealthMusic);
-                    UpdateMusicStream(singleplayerLowHealthMusic);
-                }
+                    }
+                    UpdateMusicStream(singleplayerLowHealthMusic);  // Update music stream to continue playing it
+                    }
 
                 if (healthPoints <= 0) currentScreen = GAMEOVER;
 
@@ -810,6 +815,12 @@ int main(void)
                     startTime = GetTime();}
                 if (countdownTime < 0) countdownTime = 0;
                 seconds = countdownTime % 60;
+
+                if (!IsMusicStreamPlaying(multiplayerMusic)) {
+                    PlayMusicStream(multiplayerMusic);
+                }
+                 
+                UpdateMusicStream(multiplayerMusic);  // Update music stream to continue playing it
 
                 // Start the timer for a new question
                 if (!gameInProgress) { // Reset the game when a new question starts
@@ -918,6 +929,8 @@ int main(void)
                 }
 
                 // Handle timer countdown logic (time out handling)
+                if (seconds == 1) PlaySound(timesUpSound);
+
                 if (seconds == 0) {  // If time runs out:
                     timer += deltaTime;
                     player1Answer = -1;
@@ -933,6 +946,15 @@ int main(void)
                         ResetGameVariables();
                     }
                 }
+
+                if (player1Healthpoints == 1 || player2Healthpoints == 1) {
+                    StopMusicStream(multiplayerMusic);
+                    if (!IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
+                    PlayMusicStream(singleplayerLowHealthMusic);
+                    }
+                    UpdateMusicStream(singleplayerLowHealthMusic);  // Update music stream to continue playing it
+                    }
+
 
                 // Add a delay before going to game over screen
                 if (player1Healthpoints <= 0 || player2Healthpoints <= 0) {
