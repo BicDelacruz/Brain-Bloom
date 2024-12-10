@@ -1,13 +1,7 @@
 /*****************************************************************************
-*   TODO:
-*   Add multiplayer (screen, mechanics, make user input two names, etc)
-*   Add main menu background animation
-*   Change timer font
-*   Complete settings (UI, options for window size, audio)
-*   Cosmetics (cursor skins when player reaches a highscore)
-*   Audio (for buttons and etc.)
-*   Implement loading screen
-*   Clean code up and remove redundancy (make variables global)
+*   
+*   https://github.com/BicDelacruz/Brain-Bloom
+*
 *****************************************************************************/
 
 #include <vector>
@@ -612,6 +606,7 @@ int main(void)
                 }
                 break;
             case RULES1:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
                 if (timer > inputCooldown) {
@@ -635,6 +630,7 @@ int main(void)
                 }
                 break;
             case PLAYERNAME:
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 countdownTime = 4;
                 if (!namesEntered) {
                     if (playerNameBoxBtn.isClicked(mousePosition, mouseClicked)) {
@@ -677,8 +673,6 @@ int main(void)
                 startTime = GetTime();}
 
                 if (countdownTime < 0) countdownTime = 0;
-                
-
 
                 if (IsMusicStreamPlaying(mainMenuMusic)) {
                     StopMusicStream(mainMenuMusic);
@@ -692,7 +686,6 @@ int main(void)
 
                 if (countdownTime < 0) countdownTime = 0;
         
-
                 seconds = countdownTime % 60;
 
                 timer += deltaTime;
@@ -713,8 +706,6 @@ int main(void)
                 
                 seconds = countdownTime % 60;
 
-                
-
                 if (!IsMusicStreamPlaying(singleplayerMusic)) {
                     PlayMusicStream(singleplayerMusic);
                 }
@@ -729,7 +720,6 @@ int main(void)
                 if (countdownTime < 0) countdownTime = 0;
         
                 seconds = countdownTime % 60;
-
 
                 // Answers
                 if ((enableInput && answerQ_Btn.isClicked(mousePosition, mouseClicked)) || (enableInput && IsKeyPressed(KEY_Q))){
@@ -1104,11 +1094,7 @@ int main(void)
                 break;
             case LEADERBOARDS:
                 // Pause
-                if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
-                    previousScreen = LEADERBOARDS;
-                    currentScreen = PAUSE;
-                }
-                if (IsKeyPressed(KEY_ESCAPE)) {
+                if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     previousScreen = LEADERBOARDS;
                     currentScreen = PAUSE;
                 }
