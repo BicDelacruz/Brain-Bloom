@@ -13,7 +13,12 @@
 #include <ctime>
 #include <thread>
 #include <chrono>
+#include <algorithm>
+#include <stdio.h>
+#include <string.h>
 
+#define MAX_NAME_LENGTH 50
+#define MAX_LEADERBOARD_SIZE 10
 #define DATA_FILE_PATH "data/data.bin" 
 
 // Screen manager, based on an example from the raylib website
@@ -224,6 +229,68 @@ int LoadHighScore(const char* filename) {
     return value;
 }
 
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    int score;
+} Player;
+
+// Global leaderboard
+Player leaderboard[MAX_LEADERBOARD_SIZE];
+
+// Save leaderboard to a binary file
+void SaveLeaderboard() {
+    FILE *file = fopen("leaderboard.dat", "wb");
+    if (file != NULL) {
+        fwrite(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
+        fclose(file);
+    }
+}
+
+// Load leaderboard from the binary file
+void LoadLeaderboard() {
+    FILE *file = fopen("leaderboard.dat", "rb");
+    if (file != NULL) {
+        fread(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
+        fclose(file);
+    }
+}
+
+
+void UpdateLeaderboard(const std::string &playerName, int playerScore) {
+    // Create a new player entry
+    Player newPlayer;
+    strncpy(newPlayer.name, playerName.c_str(), MAX_NAME_LENGTH); // Copy the player's name
+    newPlayer.score = playerScore;
+
+    // Insert the new player in the correct position
+    int i;
+    bool added = false;
+
+    for (i = 0; i < MAX_LEADERBOARD_SIZE; i++) {
+        // If the new player's score is higher than the current player's score
+        if (leaderboard[i].score < playerScore) {
+            // Shift all players below this position down
+            for (int j = MAX_LEADERBOARD_SIZE - 1; j > i; j--) {
+                leaderboard[j] = leaderboard[j - 1];
+            }
+            leaderboard[i] = newPlayer; // Insert the new player at the found position
+            added = true;
+            break;
+        }
+    }
+
+    // If the leaderboard is not full and the new player has the lowest score, add them at the end
+    if (!added && i < MAX_LEADERBOARD_SIZE) {
+        leaderboard[i] = newPlayer;
+    }
+
+    // Save the leaderboard to the binary file
+    SaveLeaderboard();
+}
+
+
+
+
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -281,6 +348,8 @@ int main(void)
 
     bool muteMusic = false;
     bool muteUi = false;
+
+    
 
     // Prevents mouse input when currentScreen transitions to RULES
     float inputCooldown = 0.2f;    // Cooldown time in seconds
@@ -398,10 +467,17 @@ int main(void)
     Sound correctAnswerSound = LoadSound("assets/sounds/correct_answer.mp3");
     Sound wrongAnswerSound = LoadSound("assets/sounds/wrong_answer.mp3");
     Sound gameoverSound = LoadSound("assets/sounds/gameover.mp3");
+    Sound playercorrect = LoadSound("assets/sounds/gotcorrect.mp3");
+    Sound bothWrong = LoadSound("assets/sounds/Both-wrong.mp3");
+    Sound playerWins = LoadSound("assets/sounds/playerWins.mp3");
+    SetSoundVolume(playerWins, 0.5f);
+    Sound buttonClicked = LoadSound("assets/sounds/correct_answer.mp3");
+
     Sound timesUpSound = LoadSound("assets/sounds/no-time-left.mp3");
     SetSoundVolume(timesUpSound, 0.5f);
     Sound countdownSound = LoadSound("assets/sounds/3s-countdown.mp3");
     SetSoundVolume(countdownSound, 0.3f);
+    
 
     auto SetMute = [&](bool muteMusic, bool muteUi) {
         float musicVolume = muteMusic ? 0.0f : 1.0f;
@@ -410,8 +486,13 @@ int main(void)
         SetMusicVolume(singleplayerMusic, musicVolume);
         SetMusicVolume(singleplayerLowHealthMusic, musicVolume);
         SetMusicVolume(mainMenuMusic, musicVolume);
+        SetMusicVolume(multiplayerMusic, musicVolume);
 
         SetSoundVolume(menuButtonsSound, uiVolume);
+        SetSoundVolume(playerWins, uiVolume);
+        SetSoundVolume(bothWrong, uiVolume);
+        SetSoundVolume(playercorrect, uiVolume);
+        SetSoundVolume(buttonClicked, uiVolume);
         SetSoundVolume(wrongAnswerSound, uiVolume);
         SetSoundVolume(correctAnswerSound, uiVolume);
         SetSoundVolume(gameoverSound, uiVolume);
@@ -635,10 +716,12 @@ int main(void)
                 countdownTime = 4;
                 if (!namesEntered) {
                     if (playerNameBoxBtn.isClicked(mousePosition, mouseClicked)) {
+                        PlaySound(menuButtonsSound);
                         enteringPlayer1Name = true;
                         enteringPlayer2Name = false;
                     }
                     if (playerNameBox1Btn.isClicked(mousePosition, mouseClicked)) {
+                        PlaySound(menuButtonsSound);
                         enteringPlayer1Name = false;
                         enteringPlayer2Name = true;
                     }
@@ -871,21 +954,25 @@ int main(void)
                 // Handle Player 1 input (Q, W, E, R keys)
                 if (enableInput && !player1Selected) { // Check if input is enabled and Player 1 hasn't selected
                     if (IsKeyPressed(KEY_Q)) {
+                        PlaySound(buttonClicked);
                         player1Answer = 0;
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_W)) {
+                        PlaySound(buttonClicked);
                         player1Answer = 1;
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_E)) {
+                        PlaySound(buttonClicked);
                         player1Answer = 2;
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_R)) {
+                        PlaySound(buttonClicked);
                         player1Answer = 3;
                         player1Selected = true; // Lock Player 1's choice
                         player1AnswerTime = (int)(GetTime() * 1000);
@@ -895,21 +982,25 @@ int main(void)
                 // Handle Player 2 input (U, I, O, P keys)
                 if (enableInput && !player2Selected) { // Check if input is enabled and Player 2 hasn't selected
                     if (IsKeyPressed(KEY_U)) {
+                        PlaySound(buttonClicked);
                         player2Answer = 0;
                         player2Selected = true; // Lock Player 2's choice
                         player2AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_I)) {
+                        PlaySound(buttonClicked);
                         player2Answer = 1;
                         player2Selected = true; // Lock Player 2's choice
                         player2AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_O)) {
+                        PlaySound(buttonClicked);
                         player2Answer = 2;
                         player2Selected = true; // Lock Player 2's choice
                         player2AnswerTime = (int)(GetTime() * 1000);
                     }
                     else if (IsKeyPressed(KEY_P)) {
+                        PlaySound(buttonClicked);
                         player2Answer = 3;
                         player2Selected = true; // Lock Player 2's choice
                         player2AnswerTime = (int)(GetTime() * 1000);
@@ -927,12 +1018,14 @@ int main(void)
                     if (player1Answer == questions[currentQuestionIndex].correctAnswerIndex && 
                         player2Answer != questions[currentQuestionIndex].correctAnswerIndex) {
                         gameMessage = "Player 1 got the correct answer!";
+                        PlaySound(playercorrect);
                         player1Score++;
                         player2Healthpoints--;
                     }
                     else if (player2Answer == questions[currentQuestionIndex].correctAnswerIndex && 
                             player1Answer != questions[currentQuestionIndex].correctAnswerIndex) {
                         gameMessage = "Player 2 got the correct answer!";
+                        PlaySound(playercorrect);
                         player2Score++;
                         player1Healthpoints--;
                     }
@@ -941,18 +1034,21 @@ int main(void)
                         // Both players got it correct, check who answered first
                         if (player1AnswerTime < player2AnswerTime) {
                             gameMessage = "Both players are correct, but Player 1 was faster!";
+                            PlaySound(playercorrect);
                             player1Score++;
                         } else if (player2AnswerTime < player1AnswerTime) {
                             gameMessage = "Both players are correct, but Player 2 was faster!";
+                            PlaySound(playercorrect);
                             player2Score++;
                         }
                     }
                     else {
                         // Both players got it wrong
                         gameMessage = "Both players got the wrong answer!";
+                        PlaySound(bothWrong);
                         player1Healthpoints--;
                         player2Healthpoints--;
-                        correctAnswer = true;
+                        correctAnswer = true;;
                     }
 
                         messageDisplayed = true; // Flag to indicate message is displayed
@@ -1007,9 +1103,16 @@ int main(void)
                     gameOverDelayTimer += deltaTime;  // Update timer with the elapsed time
 
                     if (gameOverDelayTimer >= 2.5f) { // Add a 2.5-second delay
-                        currentScreen = GAMEOVER1;    // Switch to the Game Over screen
+                        currentScreen = GAMEOVER1;
+                        PlaySound(playerWins);    // Switch to the Game Over screen
                     }
                 }
+                if (player1Score > player2Score) {
+                    UpdateLeaderboard(player1Name, player1Score);
+                } else if (player2Score > player1Score) {
+                    UpdateLeaderboard(player2Name, player2Score);
+                }
+
                 // Pause
                 if (pauseBtn.isClicked(mousePosition, mouseClicked) ) {
                         currentScreen = PAUSE;
@@ -1052,12 +1155,17 @@ int main(void)
                 break;
             case GAMEOVER:
                 if (IsMusicStreamPlaying(singleplayerMusic) || IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
-                    StopMusicStream(singleplayerMusic); // Stop singleplayer music
+                    StopMusicStream(singleplayerMusic); // Stop multiplayer music
                     StopMusicStream(singleplayerLowHealthMusic); // Stop singleplayer music
                     PlaySound(gameoverSound);
                 }
+                
 
-                if (!IsMusicStreamPlaying(mainMenuMusic)) PlayMusicStream(mainMenuMusic);
+                if (!IsMusicStreamPlaying(mainMenuMusic)) {
+                    PlayMusicStream(mainMenuMusic);
+                }
+                 
+                UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
 
                 if (score > highscore) {
                     highscore = score;
@@ -1078,6 +1186,10 @@ int main(void)
                     currentScreen = RULES; } 
                 break;
             case GAMEOVER1:
+                if (!IsMusicStreamPlaying(multiplayerMusic)) {
+                    PlayMusicStream(multiplayerMusic);
+                }
+                UpdateMusicStream(multiplayerMusic);  // Update music stream to continue playing it
                 // Determine the winner based on scores
                 if (player1Score > player2Score) {
                     gameMessage = player1Name + " wins!";
@@ -1458,8 +1570,18 @@ int main(void)
             pauseBtn.DrawButton();
             break;
         case LEADERBOARDS:
-            DrawTexture(leaderBoardBackground, 0, 0 , WHITE);
+            DrawTexture(leaderBoardBackground, 0, 0, WHITE);
             pauseBtn.DrawButton();
+
+           // Load leaderboard data
+            LoadLeaderboard();
+
+            // Display leaderboard with correct formatting
+            for (int i = 0; i < MAX_LEADERBOARD_SIZE; i++) {
+                char scoreText[100];
+                snprintf(scoreText, sizeof(scoreText), "%d. %s - %d", i + 1, leaderboard[i].name, leaderboard[i].score);
+                DrawText(scoreText, 700, 600 + i * 30, 20, BLACK);  // Adjust position as needed
+            }
             break;
         case SETTINGS:
             DrawTexture(settingsBackground, 0, 0 , WHITE);
