@@ -1478,16 +1478,15 @@ int main(void)
 
             DrawTextHorizontal(arcadeFont, TextFormat("Score: %i", score), 50.0f, 1.0f, BLACK, 300.0f);
             DrawTextHorizontal(arcadeFont, TextFormat("High Score: %i", highscore), 50.0f, 1.0f, ORANGE, 400.0f);
-
+          
             restartBtn.DrawButtonHorizontal();
-
+            restartBtn.position.y = 500.0f;
+            mainMenuBtn.DrawButtonHorizontal();
+            mainMenuBtn.imgScale = 0.80f;
+            mainMenuBtn.position.y = 600.0f;
             exitBtn.DrawButtonHorizontal();
             exitBtn.imgScale = 0.53f;
             exitBtn.position.y = 700.0f;
-
-            mainMenuBtn.DrawButtonHorizontal();
-            mainMenuBtn.imgScale = 0.80f;
-            mainMenuBtn.position.y = 595.0f;
 
             break;
         case GAMEOVER1:
