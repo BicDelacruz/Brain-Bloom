@@ -694,15 +694,15 @@ int main(void)
             case READY:
 
                 if (GetTime() - startTime >= 1.0) {
-                countdownTime--;
-                startTime = GetTime();}
+                    countdownTime--;
+                    startTime = GetTime();
+                }
 
                 if (countdownTime < 0) countdownTime = 0;
 
-                if (IsMusicStreamPlaying(mainMenuMusic)) {
-                    StopMusicStream(mainMenuMusic);
-                    PlaySound(countdownSound);
-                } 
+                if (!IsSoundPlaying(countdownSound)) PlaySound(countdownSound);
+
+                if (IsMusicStreamPlaying(mainMenuMusic)) StopMusicStream(mainMenuMusic);
 
                 if (GetTime() - startTime >= 1.0) {
                     countdownTime--;
@@ -1324,7 +1324,7 @@ int main(void)
                         }
                     }
                 }
-                
+
                 // Draw the actual answer in black for Player 1
                 if (i == 0) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
                 else if (i == 1) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
