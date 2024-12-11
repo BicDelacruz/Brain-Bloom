@@ -17,7 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define DATA_FILE_PATH "data/data.bin" 
+#define SINGLEPLAYER_DATA_FILE_PATH "data/singleplayer-data.bin" 
+#define MULTIPLAYER_DATA_FILE_PATH "data/multiplayer-data.bin" 
 
 
 // Screen manager, based on an example from the raylib website
@@ -251,7 +252,7 @@ struct LeaderboardEntry {
 std::vector<LeaderboardEntry> leaderboard;
 
 void SaveLeaderboard() {
-    std::ofstream file("data1.bin", std::ios::binary);
+    std::ofstream file(MULTIPLAYER_DATA_FILE_PATH, std::ios::binary);
     if (file.is_open()) {
         // Save the leaderboard size first
         int size = leaderboard.size();
@@ -270,7 +271,7 @@ void SaveLeaderboard() {
 
 // Load leaderboard from a binary file. Will create a new .bin file if not existing
 void LoadLeaderboard() {
-    std::ifstream file("data1.bin", std::ios::binary);
+    std::ifstream file(MULTIPLAYER_DATA_FILE_PATH, std::ios::binary);
     if (file.is_open()) {
         leaderboard.clear(); // Clear existing leaderboard
 
@@ -389,7 +390,7 @@ int main(void)
     int currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
     int selectedAnswerIndex = -1;
     int score = 0;
-    int highscore = LoadHighScore(DATA_FILE_PATH);
+    int highscore = LoadHighScore(SINGLEPLAYER_DATA_FILE_PATH);
     LoadLeaderboard();
     int healthPoints = 10;
     int wrongAnswerIndex;
@@ -1193,7 +1194,7 @@ int main(void)
 
                 if (score > highscore) {
                     highscore = score;
-                    SaveHighScore(DATA_FILE_PATH, highscore);
+                    SaveHighScore(SINGLEPLAYER_DATA_FILE_PATH, highscore);
                 }
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) {
                     PlaySound(menuButtonsSound);
@@ -1512,28 +1513,36 @@ int main(void)
         case LEADERBOARDS:
             DrawTexture(leaderBoardBackground, 0, 0, WHITE);
             pauseBtn.DrawButton();
+
             // Draw the top 10 leaderboard entries
             for (size_t i = 0; i < leaderboard.size(); i++) {
-            const LeaderboardEntry& entry = leaderboard[i];
-            // Draw the player's rank and name separately
-            std::string rankText = std::to_string(i + 1) + ". " + entry.playerName;
-            DrawTextEx(arcadeFont, rankText.c_str(), (Vector2){550, yOffsets[i]}, 22.0f, 2.0f, BLACK);
-            // Now, draw the player's score separately with a different offset or style
-            std::string scoreText = std::to_string(entry.score);
-            DrawTextEx(arcadeFont, scoreText.c_str(), (Vector2){1320, yOffsets[i]}, 22.0f, 2.0f, BLACK); // Adjust the X position (500 here)
+                const LeaderboardEntry& entry = leaderboard[i];
+                // Draw the player's rank and name separately
+                std::string rankText = std::to_string(i + 1) + ". " + entry.playerName;
+                DrawTextEx(arcadeFont, rankText.c_str(), (Vector2){550, yOffsets[i]}, 22.0f, 2.0f, BLACK);
+                // Now, draw the player's score separately with a different offset or style
+                std::string scoreText = std::to_string(entry.score);
+                DrawTextEx(arcadeFont, scoreText.c_str(), (Vector2){1320, yOffsets[i]}, 22.0f, 2.0f, BLACK); // Adjust the X position (500 here)
 
-            // Draw shadow effect by drawing the same text at various offsets for "PLAYER"
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "PLAYER", (Vector2){520 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);}}}
-            DrawTextEx(arcadeFont, "PLAYER", (Vector2){520, 400}, 45.0f, 2.0f, YELLOW);
-            // Draw shadow effect by drawing the same text at various offsets for "SCORE"
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "SCORE", (Vector2){1220 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);}}}
-            DrawTextEx(arcadeFont, "SCORE", (Vector2){1220, 400}, 45.0f, 2.0f, YELLOW);
+                // Draw shadow effect by drawing the same text at various offsets for "PLAYER"
+                for (int x = -2; x <= 2; x++) {
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                            DrawTextEx(arcadeFont, "PLAYER", (Vector2){520 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);
+                        }
+                    }
+                }
+                DrawTextEx(arcadeFont, "PLAYER", (Vector2){520, 400}, 45.0f, 2.0f, YELLOW);
+
+                // Draw shadow effect by drawing the same text at various offsets for "SCORE"
+                for (int x = -2; x <= 2; x++) {
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                            DrawTextEx(arcadeFont, "SCORE", (Vector2){1220 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);
+                        }
+                    }
+                }
+                DrawTextEx(arcadeFont, "SCORE", (Vector2){1220, 400}, 45.0f, 2.0f, YELLOW);
             }
             break;
         case SETTINGS:
