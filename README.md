@@ -24,7 +24,7 @@ Scoring:
 Winning Condition:
 
 - The player with the most points when either player runs out of health wins.
-- If both players lose all health, the game ends in a draw, and scores determine the winner.
+- If one of the players lose all health, the game ends in a draw, and scores determine the winner.
 
 Gameplay Highlights:
 
