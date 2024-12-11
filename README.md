@@ -11,6 +11,27 @@ https://www.raylib.com/
 - Player has 10 health points, answer correctly to get a point and advance to the next question, else you lose a health point!
 - Player can use 4 abilities: Reveal two wrong answers, Skip current question, Restore a health point, and Reveal one wrong answer.
 
+# Multiplayer 
+
+- Two players compete to answer questions. Both players start with 10 health points.
+
+Scoring:
+
+- Correct answers grant 1 point.
+- The player who answers correctly first earns an additional bonus point.
+- Answer incorrectly, and you lose 1 health point.
+
+Winning Condition:
+
+- The player with the most points when either player runs out of health wins.
+- If both players lose all health, the game ends in a draw, and scores determine the winner.
+
+Gameplay Highlights:
+
+- Answer quickly to gain a competitive edge!
+- Monitor both scores and health to make tactical decisions.
+- Take your lead to dominate the leaderboards!
+
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Pre-Alpha: 
 
@@ -50,6 +71,9 @@ Pre-Alpha:
 - Leaderboards mechanism to be added
 - Multiplayer music to be added
 
+12/11/2024
+- Leaderboards finished
+- Game Development finished
 
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------

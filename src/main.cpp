@@ -10,11 +10,15 @@
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
+#include <ctime>
+#include <thread>
+#include <chrono>
+#include <algorithm>
+#include <stdio.h>
 #include <string.h>
 
-#define MAX_NAME_LENGTH 50
-#define MAX_LEADERBOARD_SIZE 10
 #define DATA_FILE_PATH "data/data.bin" 
+
 
 // Screen manager, based on an example from the raylib website
 typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, SINGLEPLAYER_RULES, MULTIPLAYER_RULES, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, SINGLEPLAYER_GAMEOVER, MULTIPLAYER_GAMEOVER, MULTIPLAYER_CONTROLS, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
@@ -203,6 +207,16 @@ int GetOneWrongAnswerIndex(int correctAnswerIndex) {
     }
 }
 
+void DrawTextHighlight(Font font, const char* text, float posX, float posY, 
+                        float fontSize, float fontSpacing, Color highlightColor) {
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) DrawTextEx(font, text, {posX + (float) x, posY + (float)y}, fontSize, fontSpacing, highlightColor);
+            }
+        }
+    DrawTextEx(font, text, {posX, posY}, fontSize, fontSpacing, BLACK);
+}
+
 // Save highscore to a binary file
 void SaveHighScore(const char* filename, int value) {
     std::ofstream outFile(filename, std::ios::binary);
@@ -223,14 +237,83 @@ int LoadHighScore(const char* filename) {
     return value;
 }
 
-void DrawTextHighlight(Font font, const char* text, float posX, float posY, 
-                        float fontSize, float fontSpacing, Color highlightColor) {
-    for (int x = -2; x <= 2; x++) {
-        for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) DrawTextEx(font, text, {posX + (float) x, posY + (float)y}, fontSize, fontSpacing, highlightColor);
-            }
+//Stores player names and scores used for leader board
+struct LeaderboardEntry {
+    std::string playerName;
+    int score;
+
+    bool operator>(const LeaderboardEntry& other) const {
+        return score > other.score; // Compare scores for sorting
+    }
+};
+
+// Global leaderboard vector
+std::vector<LeaderboardEntry> leaderboard;
+
+void SaveLeaderboard() {
+    std::ofstream file("data1.bin", std::ios::binary);
+    if (file.is_open()) {
+        // Save the leaderboard size first
+        int size = leaderboard.size();
+        file.write(reinterpret_cast<char*>(&size), sizeof(size));
+
+        // Save each player's name and score
+        for (const auto& entry : leaderboard) {
+            int nameLength = entry.playerName.length();
+            file.write(reinterpret_cast<char*>(&nameLength), sizeof(nameLength)); // Save name length
+            file.write(entry.playerName.c_str(), nameLength); // Save name
+            file.write(reinterpret_cast<const char*>(&entry.score), sizeof(entry.score)); // Save score
         }
-    DrawTextEx(font, text, {posX, posY}, fontSize, fontSpacing, BLACK);
+        file.close();
+    }
+}
+
+// Load leaderboard from a binary file. Will create a new .bin file if not existing
+void LoadLeaderboard() {
+    std::ifstream file("data1.bin", std::ios::binary);
+    if (file.is_open()) {
+        leaderboard.clear(); // Clear existing leaderboard
+
+        // Read leaderboard size
+        int size;
+        file.read(reinterpret_cast<char*>(&size), sizeof(size));
+
+        // Read each player's name and score
+        for (int i = 0; i < size; i++) {
+            int nameLength;
+            file.read(reinterpret_cast<char*>(&nameLength), sizeof(nameLength)); // Read name length
+            char* nameBuffer = new char[nameLength + 1]; // Allocate memory for name
+            file.read(nameBuffer, nameLength); // Read name
+            nameBuffer[nameLength] = '\0'; // Null-terminate the string
+
+            int score;
+            file.read(reinterpret_cast<char*>(&score), sizeof(score)); // Read score
+
+            // Add to leaderboard
+            leaderboard.push_back(LeaderboardEntry{nameBuffer, score});
+
+            delete[] nameBuffer; // Clean up memory
+        }
+
+        file.close();
+    }
+}
+
+void UpdateLeaderboard(const std::string& player1Name, int player1Score, const std::string& player2Name, int player2Score) {
+    // Add new scores to the leaderboard
+    leaderboard.push_back(LeaderboardEntry{player1Name, player1Score});
+    leaderboard.push_back(LeaderboardEntry{player2Name, player2Score});
+
+    // Sort leaderboard by score (highest to lowest)
+    std::sort(leaderboard.begin(), leaderboard.end(), std::greater<LeaderboardEntry>());
+
+    // Keep only top 10 players
+    if (leaderboard.size() > 10) {
+        leaderboard.resize(10);
+    }
+
+    // Save the updated leaderboard
+    SaveLeaderboard();
 }
 
 //------------------------------------------------------------------------------------
@@ -307,6 +390,7 @@ int main(void)
     int selectedAnswerIndex = -1;
     int score = 0;
     int highscore = LoadHighScore(DATA_FILE_PATH);
+    LoadLeaderboard();
     int healthPoints = 10;
     int wrongAnswerIndex;
 
@@ -327,6 +411,8 @@ int main(void)
     std::string gameMessage1;
     std::string gameMessage2;
 
+    // Predefined Y-offsets for leaderboard entries (top 10)
+    float yOffsets[] = {470.0f, 510.0f, 550.0f, 590.0f, 630.0f, 670.0f, 710.0f, 750.0f, 790.0f, 830.0f};
 
     std::vector<int> wrongAnswersIndices = {-1, -1};  // 2 wrong answers' indices, reset this variabe everytime after its value gets changed
 
@@ -1036,7 +1122,9 @@ int main(void)
                 if (player1Healthpoints <= 0 || player2Healthpoints <= 0) {
                     if (!isGameOverTriggered) {
                         isGameOverTriggered = true;  // Flag to indicate game-over condition
-                        gameOverDelayTimer = 0.0f;   // Reset the timer
+                        gameOverDelayTimer = 0.0f; 
+                        // After Player 1 and Player 2 finish the round, update the leaderboard
+                        UpdateLeaderboard(player1Name, player1Score, player2Name, player2Score);  // Reset the timer
                     }
                 }
                 // If the game-over condition has been triggered, increment the timer
@@ -1161,6 +1249,10 @@ int main(void)
                     currentScreen = MULTIPLAYER_RULES; } 
                 break;
             case LEADERBOARDS:
+                if (!IsMusicStreamPlaying(multiplayerMusic)) {
+                    PlayMusicStream(multiplayerMusic);
+                }
+                UpdateMusicStream(multiplayerMusic);  // Update music stream to continue playing it
                 // Pause
                 if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     previousScreen = LEADERBOARDS;
@@ -1420,12 +1512,28 @@ int main(void)
         case LEADERBOARDS:
             DrawTexture(leaderBoardBackground, 0, 0, WHITE);
             pauseBtn.DrawButton();
-            if (player1Score > player2Score) {    
-                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player1Name.c_str(), player1Score), 40.0f, 1.0f, BLACK, 500.0f);
-                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player2Name.c_str(), player2Score), 40.0f, 1.0f, BLACK, 600.0f);
-            } else {
-                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player2Name.c_str(), player2Score), 40.0f, 1.0f, BLACK, 600.0f);
-                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player1Name.c_str(), player1Score), 40.0f, 1.0f, BLACK, 500.0f);
+            // Draw the top 10 leaderboard entries
+            for (size_t i = 0; i < leaderboard.size(); i++) {
+            const LeaderboardEntry& entry = leaderboard[i];
+            // Draw the player's rank and name separately
+            std::string rankText = std::to_string(i + 1) + ". " + entry.playerName;
+            DrawTextEx(arcadeFont, rankText.c_str(), (Vector2){550, yOffsets[i]}, 22.0f, 2.0f, BLACK);
+            // Now, draw the player's score separately with a different offset or style
+            std::string scoreText = std::to_string(entry.score);
+            DrawTextEx(arcadeFont, scoreText.c_str(), (Vector2){1320, yOffsets[i]}, 22.0f, 2.0f, BLACK); // Adjust the X position (500 here)
+
+            // Draw shadow effect by drawing the same text at various offsets for "PLAYER"
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "PLAYER", (Vector2){520 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);}}}
+            DrawTextEx(arcadeFont, "PLAYER", (Vector2){520, 400}, 45.0f, 2.0f, YELLOW);
+            // Draw shadow effect by drawing the same text at various offsets for "SCORE"
+            for (int x = -2; x <= 2; x++) {
+            for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) {
+            DrawTextEx(arcadeFont, "SCORE", (Vector2){1220 + (float)x, 400 + (float)y}, 45.0f, 2.0f, BLACK);}}}
+            DrawTextEx(arcadeFont, "SCORE", (Vector2){1220, 400}, 45.0f, 2.0f, YELLOW);
             }
             break;
         case SETTINGS:
