@@ -33,7 +33,7 @@ Gameplay Highlights:
 - Take your lead to dominate the leaderboards!
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Pre-Alpha: 
+Pre-Alpha version: 
 
 11/25/2024:
 - Project published in GitHub
@@ -47,7 +47,7 @@ Pre-Alpha:
 - Gameover screen completed
 - Multiplayer to be added
 
-
+Alpha version:
 
 12/1/2024:
 - Main screen added
@@ -58,6 +58,8 @@ Pre-Alpha:
 12/8/2024
 - Multiplayer functionalities added
 - Multiple bugs to be fixed
+
+Beta version:
 
 12/1/2024:
 - Main Menu screen updated
@@ -70,6 +72,8 @@ Pre-Alpha:
 - Leaderboards screen finished
 - Leaderboards mechanism to be added
 - Multiplayer music to be added
+
+Final release: 
 
 12/11/2024
 - Leaderboards finished
