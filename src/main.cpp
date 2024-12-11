@@ -1577,7 +1577,7 @@ int main(void)
                         if (x != 0 || y != 0) { 
                             DrawTextEx(arcadeFont, gameMessage1.c_str(), 
                             {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f).x) / 2.0f + (float)x,
-                            (float) (GetScreenHeight() - 750) + (float)y}, 30.0f, 1.0f, BLACK);
+                            (float) (GetScreenHeight() - 660) + (float)y}, 30.0f, 1.0f, BLACK);
                         }
                     }
                 }
@@ -1599,7 +1599,7 @@ int main(void)
 
                 DrawTextEx(arcadeFont, gameMessage2.c_str(), 
                 {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f).x) / 2.0f, 
-                (float) (GetScreenHeight() - 750)}, 30.0f, 1.0f, YELLOW);
+                (float) (GetScreenHeight() - 610)}, 30.0f, 1.0f, YELLOW);
             }
             
             leaderboardsBtn.DrawButtonHorizontal();
