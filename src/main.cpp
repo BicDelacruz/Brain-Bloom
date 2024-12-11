@@ -1310,73 +1310,52 @@ int main(void)
 
             // Player 1's answers
             for (int i = 0; i < 4; i++) {
-            // If Player 1 has selected this answer, highlight it with an orange color
-            if (player1Answer == i) {
-            // Draw the highlight first (outline effect) using a small offset
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
-            if (i == 0) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, ORANGE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
-            } else if (i == 1) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, ORANGE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
-            } else if (i == 2) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, ORANGE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
-            } else if (i == 3) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, ORANGE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}}
-            // Draw the actual answer in black for Player 1
-            if (i == 0) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
-            } else if (i == 1) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
-            } else if (i == 2) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
-            } else if (i == 3) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);}}
+                // If Player 1 has selected this answer, highlight it with an orange color
+                if (player1Answer == i) {
+                    // Draw the highlight first (outline effect) using a small offset
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
+                                if (i == 0) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, ORANGE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+                                else if (i == 1) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, ORANGE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                                else if (i == 2) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, ORANGE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                                else if (i == 3) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),25.0f, 1.0f, ORANGE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                            }
+                        }
+                    }
+                }
+                
+                // Draw the actual answer in black for Player 1
+                if (i == 0) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
+                else if (i == 1) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                else if (i == 2) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                else if (i == 3) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);
+            }
 
             // Player 2's answers
             for (int i = 0; i < 4; i++) {
-            // If Player 2 has selected this answer, highlight it with a PURPLE color
-            if (player2Answer == i) {
-            // Draw the highlight first (outline effect) using a small offset
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
-            if (i == 0) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, PURPLE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
-            } else if (i == 1) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, PURPLE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
-            } else if (i == 2) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, PURPLE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
-            } else if (i == 3) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, PURPLE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}
-            }
+                // If Player 2 has selected this answer, highlight it with a PURPLE color
+                if (player2Answer == i) {
+                    // Draw the highlight first (outline effect) using a small offset
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            if (x != 0 || y != 0) {  // Skip the center to avoid overlapping
+                                if (i == 0) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, PURPLE, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+                                else if (i == 1) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, PURPLE, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                                else if (i == 2) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, PURPLE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                                else if (i == 3) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, PURPLE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                            }
+                        }
+                    }
+                }
             
-            // Draw the actual answer in black for Player 2
-            if (i == 0) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false);
-            } else if (i == 1) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
-            } else if (i == 2) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
-            } else if (i == 3) {
-            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);}}
+                // Draw the actual answer in black for Player 2
+                if (i == 0) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width, answerQUBtn.height, 600, false); 
+                else if (i == 1) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                else if (i == 2) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                else if (i == 3) DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(), 25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);
+            
+            }
             
             //If both player got the wrong answer then it reveals the correct one
             if (correctAnswer) {
@@ -1513,7 +1492,6 @@ int main(void)
             if (enteringPlayer1Name) DrawTextHighlight(arcadeFont, "Typing...", 840.0f, 540.0f, 20.0f, 1.0f, ORANGE);
 
             //Player 2 name input        
-
             DrawTextHighlight(arcadeFont, player2Name.c_str(), 840.0f, 620.0f, 30.0f, 1.0f, PURPLE);
 
             if (enteringPlayer2Name) DrawTextHighlight(arcadeFont, "Typing... ", 840.0f, 705.0f, 20.0f, 1.0f, PURPLE);
@@ -1584,7 +1562,7 @@ int main(void)
 
                 DrawTextEx(arcadeFont, gameMessage1.c_str(), 
                 {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f).x) / 2.0f, 
-                (float) (GetScreenHeight() - 750)}, 30.0f, 1.0f, YELLOW);}
+                (float) (GetScreenHeight() - 660)}, 30.0f, 1.0f, YELLOW);}
 
             if (!gameMessage2.empty()) {
                 for (int x = -2; x <= 2; x++) {
@@ -1592,7 +1570,7 @@ int main(void)
                         if (x != 0 || y != 0) {
                             DrawTextEx(arcadeFont, gameMessage2.c_str(), 
                             {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f).x) / 2.0f + (float)x, 
-                            (float) (GetScreenHeight() - 750) + (float)y}, 30.0f, 1.0f, BLACK);
+                            (float) (GetScreenHeight() - 610) + (float)y}, 30.0f, 1.0f, BLACK);
                         }
                     }
                 }
