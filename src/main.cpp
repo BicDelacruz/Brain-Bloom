@@ -10,20 +10,14 @@
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
-#include <ctime>
-#include <thread>
-#include <chrono>
-#include <algorithm>
-#include <stdio.h>
 #include <string.h>
 
 #define MAX_NAME_LENGTH 50
 #define MAX_LEADERBOARD_SIZE 10
 #define DATA_FILE_PATH "data/data.bin" 
-#define LEADERBOARD_FILE_PATH "data/leaderboard.dat" 
 
 // Screen manager, based on an example from the raylib website
-typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, RULES, RULES1, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, GAMEOVER, GAMEOVER1, CONTROLS1, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
+typedef enum GameScreen { MAIN_MENU = 0, STARTGAME, SETTINGS, SINGLEPLAYER_RULES, MULTIPLAYER_RULES, SINGLEPLAYER, MULTIPLAYER, READY, PAUSE, SINGLEPLAYER_GAMEOVER, MULTIPLAYER_GAMEOVER, MULTIPLAYER_CONTROLS, PLAYERNAME, LEADERBOARDS, EXIT } GameScreen;
 
 // Draws text and dynamically centers it horizontally 
 void DrawTextHorizontal (Font font, const char* text, float fontSize, float fontSpacing,
@@ -113,7 +107,7 @@ void DrawCenteredTextAtX(const char* text, Font font, float x, float y, int minF
         textSize = MeasureTextEx(font, text, fontSize, 1);
     }
 
-    DrawTextEx(font, text, (Vector2){x - textSize.x / 2, y - textSize.y / 2}, fontSize, 1, color);
+    DrawTextEx(font, text, {x - textSize.x / 2, y - textSize.y / 2}, fontSize, 1, color);
 }
 
 // Draw and center text for the answer buttons based on the buttons' dimensions
@@ -135,7 +129,7 @@ void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, 
         float lineX = buttonX + (buttonWidth - lineWidth) / 2;
 
         // Draw the line at the calculated position
-        DrawTextEx(font, line.c_str(), (Vector2){lineX, (isMultiplayer) ? startY :startY + 10}, fontSize, spacing, color);
+        DrawTextEx(font, line.c_str(), {lineX, (isMultiplayer) ? startY :startY + 10}, fontSize, spacing, color);
 
         // Move to the next line's Y position
         startY += fontSize;
@@ -229,68 +223,15 @@ int LoadHighScore(const char* filename) {
     return value;
 }
 
-typedef struct {
-    char name[MAX_NAME_LENGTH];
-    int score;
-} Player;
-
-// Global leaderboard
-Player leaderboard[MAX_LEADERBOARD_SIZE];
-
-// Save leaderboard to a binary file
-void SaveLeaderboard() {
-    FILE *file = fopen(LEADERBOARD_FILE_PATH, "wb");
-    if (file != NULL) {
-        fwrite(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
-        fclose(file);
-    }
-}
-
-// Load leaderboard from the binary file
-void LoadLeaderboard() {
-    FILE *file = fopen(LEADERBOARD_FILE_PATH, "rb");
-    if (file != NULL) {
-        fread(leaderboard, sizeof(Player), MAX_LEADERBOARD_SIZE, file);
-        fclose(file);
-    }
-}
-
-
-void UpdateLeaderboard(const std::string &playerName, int playerScore) {
-    // Create a new player entry
-    Player newPlayer;
-    strncpy(newPlayer.name, playerName.c_str(), MAX_NAME_LENGTH); // Copy the player's name
-    newPlayer.score = playerScore;
-
-    // Insert the new player in the correct position
-    int i;
-    bool added = false;
-
-    for (i = 0; i < MAX_LEADERBOARD_SIZE; i++) {
-        // If the new player's score is higher than the current player's score
-        if (leaderboard[i].score < playerScore) {
-            // Shift all players below this position down
-            for (int j = MAX_LEADERBOARD_SIZE - 1; j > i; j--) {
-                leaderboard[j] = leaderboard[j - 1];
+void DrawTextHighlight(Font font, const char* text, float posX, float posY, 
+                        float fontSize, float fontSpacing, Color highlightColor) {
+    for (int x = -2; x <= 2; x++) {
+        for (int y = -2; y <= 2; y++) {
+            if (x != 0 || y != 0) DrawTextEx(font, text, {posX + (float) x, posY + (float)y}, fontSize, fontSpacing, highlightColor);
             }
-            leaderboard[i] = newPlayer; // Insert the new player at the found position
-            added = true;
-            break;
         }
-    }
-
-    // If the leaderboard is not full and the new player has the lowest score, add them at the end
-    if (!added && i < MAX_LEADERBOARD_SIZE) {
-        leaderboard[i] = newPlayer;
-    }
-
-    // Save the leaderboard to the binary file
-    SaveLeaderboard();
+    DrawTextEx(font, text, {posX, posY}, fontSize, fontSpacing, BLACK);
 }
-
-
-
-
 
 //------------------------------------------------------------------------------------
 // Program main entry point
@@ -393,7 +334,7 @@ int main(void)
 
     auto ResetGameVariables = [&]() {
 
-        countdownTime = (currentScreen == MAIN_MENU || currentScreen == GAMEOVER) ? 21 : 20;    
+        countdownTime = (currentScreen == MAIN_MENU || currentScreen == SINGLEPLAYER_GAMEOVER) ? 21 : 20;    
         currentQuestionIndex = GetUniqueRandomValue(0, questions.size()-1, history, historySize);
         isAnswerCorrect = false; 
         timer = 0.0f;
@@ -423,7 +364,7 @@ int main(void)
         gameMessage1 = "";
         gameMessage2 = "";
 
-        if (currentScreen == MAIN_MENU || currentScreen == GAMEOVER) {
+        if (currentScreen == MAIN_MENU || currentScreen == SINGLEPLAYER_GAMEOVER) {
             score = 0;
             healthPoints = 10;
 
@@ -638,12 +579,12 @@ int main(void)
             case STARTGAME:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 if (onePlayerBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = RULES;
+                    currentScreen = SINGLEPLAYER_RULES;
                     singlePLayerSelected = true;
                     PlaySound(menuButtonsSound);
                 }
                 if (twoPlayerBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = RULES1;
+                    currentScreen = MULTIPLAYER_RULES;
                     singlePLayerSelected = false;
                     PlaySound(menuButtonsSound);
                 }
@@ -675,7 +616,7 @@ int main(void)
                     PlaySound(menuButtonsSound);
                 }
                 break;
-            case RULES:
+            case SINGLEPLAYER_RULES:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
@@ -687,7 +628,7 @@ int main(void)
                     } 
                 }
                 break;
-            case RULES1:
+            case MULTIPLAYER_RULES:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
@@ -695,11 +636,11 @@ int main(void)
                     if (IsKeyPressed(KEY_ESCAPE)) currentScreen = MAIN_MENU;
                     else if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)|| IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
                         timer = 0;
-                        currentScreen = CONTROLS1;
+                        currentScreen = MULTIPLAYER_CONTROLS;
                     } 
                 }
                 break;
-            case CONTROLS1:
+            case MULTIPLAYER_CONTROLS:
                 UpdateMusicStream(mainMenuMusic);  // Update music stream to continue playing it
                 timer += deltaTime;
                 countdownTime = 4;
@@ -901,7 +842,7 @@ int main(void)
                     UpdateMusicStream(singleplayerLowHealthMusic);  // Update music stream to continue playing it
                     }
 
-                if (healthPoints <= 0) currentScreen = GAMEOVER;
+                if (healthPoints <= 0) currentScreen = SINGLEPLAYER_GAMEOVER;
 
                 // Pause
                 if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
@@ -1103,14 +1044,9 @@ int main(void)
                     gameOverDelayTimer += deltaTime;  // Update timer with the elapsed time
 
                     if (gameOverDelayTimer >= 2.5f) { // Add a 2.5-second delay
-                        currentScreen = GAMEOVER1;
+                        currentScreen = MULTIPLAYER_GAMEOVER;
                         PlaySound(playerWins);    // Switch to the Game Over screen
                     }
-                }
-                if (player1Score > player2Score) {
-                    UpdateLeaderboard(player1Name, player1Score);
-                } else if (player2Score > player1Score) {
-                    UpdateLeaderboard(player2Name, player2Score);
                 }
 
                 // Pause
@@ -1148,12 +1084,12 @@ int main(void)
                     exitConfirmed = true;
                 }
                 if (noBtn.isClicked(mousePosition, mouseClicked)) {
-                    currentScreen = (exitFromGameover) ? GAMEOVER:MAIN_MENU;  // Returns to GAMEOVER screen when player clicks no, if in the GAMEOVER screen
+                    currentScreen = (exitFromGameover) ? SINGLEPLAYER_GAMEOVER:MAIN_MENU;  // Returns to GAMEOVER screen when player clicks no, if in the GAMEOVER screen
                     exitFromGameover = false;
                     PlaySound(menuButtonsSound);
                 }
                 break;
-            case GAMEOVER:
+            case SINGLEPLAYER_GAMEOVER:
                 if (IsMusicStreamPlaying(singleplayerMusic) || IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
                     StopMusicStream(singleplayerMusic); // Stop multiplayer music
                     StopMusicStream(singleplayerLowHealthMusic); // Stop singleplayer music
@@ -1183,9 +1119,9 @@ int main(void)
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     ResetGameVariables();
 
-                    currentScreen = RULES; } 
+                    currentScreen = SINGLEPLAYER_RULES; } 
                 break;
-            case GAMEOVER1:
+            case MULTIPLAYER_GAMEOVER:
                 if (!IsMusicStreamPlaying(multiplayerMusic)) {
                     PlayMusicStream(multiplayerMusic);
                 }
@@ -1222,13 +1158,14 @@ int main(void)
                     gameMessage1 = "";
                     gameMessage2 = "";
                     ResetGameVariables();
-                    currentScreen = RULES1; } 
+                    currentScreen = MULTIPLAYER_RULES; } 
                 break;
             case LEADERBOARDS:
                 // Pause
                 if (pauseBtn.isClicked(mousePosition, mouseClicked) || IsKeyPressed(KEY_ESCAPE)) {
                     previousScreen = LEADERBOARDS;
                     currentScreen = PAUSE;
+                    PlaySound(menuButtonsSound);
                 }
                 break;
             default:
@@ -1247,7 +1184,7 @@ int main(void)
         case MAIN_MENU:
             DrawTexture(menuBackground, 0,0, WHITE);
             DrawTextureEx(titleLogo, {(float)(GetScreenWidth() - titleLogo.width * 1.1) / 2, 260}, 0, 1.1, WHITE);
-            DrawTextureEx(fiveHearts, (Vector2){755, 70}, 0.0f, 0.3, WHITE);
+            DrawTextureEx(fiveHearts, {755, 70}, 0.0f, 0.3, WHITE);
             startBtn.DrawButtonHorizontal();
             settingsBtn.DrawButtonHorizontal();
             exitBtn.DrawButtonHorizontal();        
@@ -1338,54 +1275,34 @@ int main(void)
             DrawTexture(multiplayerBackground, 0,0, WHITE);
             DrawTextureEx(questionBox, {(float)(GetScreenWidth() - questionBox.width * 1.9) / 2.0f, 150}, 0, 1.9, WHITE);
             DrawQuestionText(arcadeFont, questions[currentQuestionIndex].questionText.c_str(), 800, GetScreenWidth(), GetScreenHeight(), 30, BLACK, true);
-            // Player 1 name outline effect
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){140 + (float)x, 240 + (float)y}, 20, 0.50, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Player 1", (Vector2){140, 240}, 20, 0.50, BLACK);
-            // Player 2 name outline effect
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610 + (float)x, 240 + (float)y}, 20, 0.50, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Player 2", (Vector2){1610, 240}, 20, 0.50, BLACK);
-            //Player1 input name
+            
+            DrawTextHighlight(arcadeFont, "Player 1", 140.0f, 240.0f, 20.0f, 0.5f, ORANGE);
+
+            DrawTextHighlight(arcadeFont, "Player 2", 1610.0f, 240.0f, 20.0f, 0.5f, PURPLE);
+
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
             DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);}}}
             DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212, 190, 10, 40, screenWidth * 0.8f, BLACK);
-            //Player2 input name
+
             for (int x = -2; x <= 2; x++) {
             for (int y = -2; y <= 2; y++) {
             if (x != 0 || y != 0) {
             DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);}}}
             DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690, 190, 10, 40, screenWidth * 0.8f, BLACK);
 
-            // Draw Score
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Score: ", (Vector2){100 + (float)x, 350 + (float)y}, 30, 1.0f, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Score: ", (Vector2){100, 350}, 30, 1.0f, BLACK);
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Score: ", (Vector2){1590 + (float)x, 350 + (float)y}, 30, 1.0f, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Score: ", (Vector2){1590, 350}, 30, 1.0f, BLACK);
+            // Draw Player 1 score
+            DrawTextHighlight(arcadeFont, TextFormat("Score: %i", player1Score), 100, 350, 30, 1.0f, ORANGE);
+            // Draw Player 2 score
+            DrawTextHighlight(arcadeFont, TextFormat("Score: %i", player2Score), 1590, 350, 30, 1.0f, PURPLE);
 
-            // Draw Health
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Health: ", (Vector2){100 + (float)x, 400 + (float)y}, 30, 1.0f, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Health: ", (Vector2){100, 400}, 30, 1.0f, BLACK);
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Health: ", (Vector2){1590 + (float)x, 400 + (float)y}, 30, 1.0f, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Health: ", (Vector2){1590, 400}, 30, 1.0f, BLACK);
-            
+
+            // Draw Player 1 health
+            DrawTextHighlight(arcadeFont, "Health: ", 100, 400, 30, 1.0f, ORANGE);
+            // Draw Player 2 health
+            DrawTextHighlight(arcadeFont, "Health: ", 1590, 400, 30, 1.0f, PURPLE);
+
             answerQUBtn.DrawButton();
             answerWIBtn.DrawButton();
             answerEOBtn.DrawButton();
@@ -1444,7 +1361,9 @@ int main(void)
             25.0f, 1.0f, PURPLE, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
             } else if (i == 3) {
             DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
-            25.0f, 1.0f, PURPLE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}}
+            25.0f, 1.0f, PURPLE, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);}}}}
+            }
+            
             // Draw the actual answer in black for Player 2
             if (i == 0) {
             DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[i].c_str(),
@@ -1461,85 +1380,35 @@ int main(void)
             
             //If both player got the wrong answer then it reveals the correct one
             if (correctAnswer) {
-            // Draw the correct answer with green highlight (glow effect)
-            for (int x = -2; x <= 2; x++) { for (int y = -2; y <= 2; y++) {if (x != 0 || y != 0) {
-                switch (questions[currentQuestionIndex].correctAnswerIndex) {
-                    case 0:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, GREEN, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
-                    break;
-                    case 1:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, GREEN, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
-                    break;
-                    case 2:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, GREEN, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
-                    break;
-                    case 3:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, GREEN, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);
-                    break;
-                    // Handle invalid index (if necessary)
-                    default:
-                    break;}}}}
-
-                // Draw the correct answer in black (main text)
-                switch (questions[currentQuestionIndex].correctAnswerIndex) {
-                    case 0:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width,answerQUBtn.height, 600, false);
-                    break;
-                    case 1:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
-                    break;
-                    case 2:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
-                    break;
-                    case 3:
-                    DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);
-                    break;
-                    // Handle invalid index (if necessary)
-                    default:
-                    break;
+                // Draw the correct answer with green highlight
+                for (int x = -2; x <= 2; x++) { 
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, (questions[currentQuestionIndex].correctAnswerIndex == 0) ? GREEN : RED, answerQUBtn.position.x + (float)x, answerQUBtn.position.y + (float)y, answerQUBtn.width, answerQUBtn.height, 600, false);
+                            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, (questions[currentQuestionIndex].correctAnswerIndex == 1) ? GREEN : RED, answerWIBtn.position.x + (float)x, answerWIBtn.position.y + (float)y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, (questions[currentQuestionIndex].correctAnswerIndex == 2) ? GREEN : RED, answerEOBtn.position.x + (float)x, answerEOBtn.position.y + (float)y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                            DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, (questions[currentQuestionIndex].correctAnswerIndex == 3) ? GREEN : RED, answerRPBtn.position.x + (float)x, answerRPBtn.position.y + (float)y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                        }
                     }
                 }
+
+                DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[0].c_str(), 25.0f, 1.0f, BLACK, answerQUBtn.position.x, answerQUBtn.position.y, answerQUBtn.width,answerQUBtn.height, 600, false);
+                DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[1].c_str(), 25.0f, 1.0f, BLACK, answerWIBtn.position.x, answerWIBtn.position.y, answerWIBtn.width, answerWIBtn.height, 600, false);
+                DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[2].c_str(), 25.0f, 1.0f, BLACK, answerEOBtn.position.x, answerEOBtn.position.y, answerEOBtn.width, answerEOBtn.height, 600, false);
+                DrawAnswerText(arcadeFont, questions[currentQuestionIndex].answers[3].c_str(), 25.0f, 1.0f, BLACK, answerRPBtn.position.x, answerRPBtn.position.y, answerRPBtn.width, answerRPBtn.height, 600, false);
+                    
+            }
 
             // Display the message after answers are evaluated
             if (!gameMessage.empty()) {
                 // Calculate the width of the text to center it
                 Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage.c_str(), 30.0f, 1.0f);
-                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
-                float centerY = (GetScreenHeight() - 400);             // Vertical position (adjust as needed)
-
-                // Draw the green highlight first (outline effect) using a small offset
-                for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
-                DrawTextEx(arcadeFont, gameMessage.c_str(), 
-                (Vector2){centerX + (float)x, centerY + (float)y}, 
-                30.0f, 1.0f, GREEN);}}}
-
-                // Then draw the actual message in black (on top of the green highlight)
-                DrawTextEx(arcadeFont, gameMessage.c_str(), 
-                (Vector2){centerX, centerY}, 
-                30.0f, 1.0f, BLACK);}
-
-            // Draw Timer at the start of the question
-            if (seconds > 0) {
-            DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50.0f, 1.0f, BLACK, 100.0f);
-            } else {
-            DrawTextHorizontal(arcadeFont, "Times Up!", 50.0f, 1.0f, RED, 100.0f);  // Display "Times Up!"
+                DrawTextHighlight(arcadeFont, gameMessage.c_str(), (float) (GetScreenWidth() - textSize.x) / 2.0f, (float) (GetScreenHeight() - 400), 30.0f, 1.0f, GREEN);
             }
 
-            // Draw the current score
-            // Highlight Player 1's score with orange
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, TextFormat(" %i ", player1Score), (Vector2){250.0f + x, 350.0f + y}, 30.0f, 1.0f, ORANGE);}}}
-            DrawTextEx(arcadeFont, TextFormat(" %i ", player1Score), (Vector2){250.0f, 350.0f}, 30.0f, 1.0f, BLACK);
-            // Highlight Player 2's score with violet
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, TextFormat(" %i ", player2Score), (Vector2){1740.0f + x, 350.0f + y}, 30.0f, 1.0f, PURPLE);}}}
-            DrawTextEx(arcadeFont, TextFormat(" %i ", player2Score), (Vector2){1740.0f, 350.0f}, 30.0f, 1.0f, BLACK);
+            // Draw Timer at the start of the question
+            if (seconds > 0) DrawTextHorizontal(arcadeFont, TextFormat("Timer: %i", seconds), 50.0f, 1.0f, BLACK, 100.0f);
+            else DrawTextHorizontal(arcadeFont, "Times Up!", 50.0f, 1.0f, RED, 100.0f);  // Display "Times Up!"
 
             // Draw Health for Player 1
             if (player1Healthpoints == 11) DrawTextureEx(health_11, {90.0f, 450.0f}, 0.0f, 0.5f, WHITE);
@@ -1572,15 +1441,12 @@ int main(void)
         case LEADERBOARDS:
             DrawTexture(leaderBoardBackground, 0, 0, WHITE);
             pauseBtn.DrawButton();
-
-           // Load leaderboard data
-            LoadLeaderboard();
-
-            // Display leaderboard with correct formatting
-            for (int i = 0; i < MAX_LEADERBOARD_SIZE; i++) {
-                char scoreText[100];
-                snprintf(scoreText, sizeof(scoreText), "%d. %s - %d", i + 1, leaderboard[i].name, leaderboard[i].score);
-                DrawText(scoreText, 750, 450 + i * 40, 30, BLACK);  // Adjust position as needed
+            if (player1Score > player2Score) {    
+                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player1Name.c_str(), player1Score), 40.0f, 1.0f, BLACK, 500.0f);
+                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player2Name.c_str(), player2Score), 40.0f, 1.0f, BLACK, 600.0f);
+            } else {
+                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player2Name.c_str(), player2Score), 40.0f, 1.0f, BLACK, 600.0f);
+                DrawTextHorizontal(arcadeFont, TextFormat("%s's Score: %i", player1Name.c_str(), player1Score), 40.0f, 1.0f, BLACK, 500.0f);
             }
             break;
         case SETTINGS:
@@ -1621,51 +1487,37 @@ int main(void)
             if (seconds > 0) DrawTextHorizontal(arcadeFont, TextFormat("in %i", seconds), 70.0f, 1.0f, WHITE, GetScreenHeight() - 200.0f);
             else DrawTextHorizontal(arcadeFont, "Go!", 80.0f, 1.0f, GREEN, GetScreenHeight() - 200.0f);
             break;
-        case RULES:
+        case SINGLEPLAYER_RULES:
             DrawTexture(rulesScreen, 0, 0, WHITE);
             DrawTextHorizontal(arcadeFont, "Press any button to start", 30, 1, WHITE, GetScreenHeight() - 200);
             break;
-        case RULES1:
+        case MULTIPLAYER_RULES:
             DrawTexture(rulesScreen1, 0, 0, WHITE);
             DrawTextHorizontal(arcadeFont, "Press any button to proceed", 30, 1, WHITE, GetScreenHeight() - 200);
             break;
-        case CONTROLS1:
+        case MULTIPLAYER_CONTROLS:
             DrawTexture(controlScreen2, 0,0,WHITE);
              DrawTextHorizontal(arcadeFont, "Press any button to proceed", 30, 1, WHITE, GetScreenHeight() - 200);
             if (timer > inputCooldown) {
-            if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-            currentScreen = PLAYERNAME;
-            }}
+                if (IsAnyKeyPressed() || IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) currentScreen = PLAYERNAME;
+            }
             break;
         case PLAYERNAME:
             DrawTexture(enterPlayerName, 0, 0, WHITE);
             playerNameBoxBtn.DrawButton();
             playerNameBox1Btn.DrawButton();
-            //Player 1 name input
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840 + (float)x, 455 + (float)y}, 30, 1, ORANGE);}}}
-            DrawTextEx(arcadeFont, player1Name.c_str(), (Vector2){840, 455}, 30, 1, BLACK);
-            if (enteringPlayer1Name){
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 540 + (float)y}, 20, 1.0f, ORANGE);}}}
-            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 540}, 20, 1.0f, BLACK);}
-            //Player 2 name input        
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840 + (float)x, 620 + (float)y}, 30, 1, PURPLE);}}}
-            DrawTextEx(arcadeFont, player2Name.c_str(), (Vector2){840, 620}, 30, 1, BLACK);
-            if (enteringPlayer2Name){
-            for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840 + (float)x, 705 + (float)y}, 20, 1.0f, PURPLE);}}}
-            DrawTextEx(arcadeFont, "Typing... ", (Vector2){840, 705}, 20, 1.0f, BLACK);}
 
+            //Player 1 name input
+            DrawTextHighlight(arcadeFont, player1Name.c_str(), 840.0f, 455.0f, 30, 1.0f, ORANGE);
+
+            if (enteringPlayer1Name) DrawTextHighlight(arcadeFont, "Typing...", 840.0f, 540.0f, 20.0f, 1.0f, ORANGE);
+
+            //Player 2 name input        
+
+            DrawTextHighlight(arcadeFont, player2Name.c_str(), 840.0f, 620.0f, 30.0f, 1.0f, PURPLE);
+
+            if (enteringPlayer2Name) DrawTextHighlight(arcadeFont, "Typing... ", 840.0f, 705.0f, 20.0f, 1.0f, PURPLE);
+            
             DrawTextHorizontal(arcadeFont, "Press ENTER to start", 30, 1, WHITE, GetScreenHeight() - 200);
             break;
         case PAUSE:
@@ -1682,7 +1534,7 @@ int main(void)
             yesBtn.DrawButtonHorizontal();
             noBtn.DrawButtonHorizontal();
             break;
-        case GAMEOVER:
+        case SINGLEPLAYER_GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
 
             DrawTextHorizontal(arcadeFont, TextFormat("Score: %i", score), 50.0f, 1.0f, BLACK, 300.0f);
@@ -1698,62 +1550,58 @@ int main(void)
             exitBtn.position.y = 700.0f;
 
             break;
-        case GAMEOVER1:
+        case MULTIPLAYER_GAMEOVER:
             DrawTexture(gameoverBackground, 0, 0, WHITE);
 
             // Display the message after answers are evaluated
             if (!gameMessage.empty()) {
-                // Calculate the width of the text to center it
-                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage.c_str(), 75.0f, 1.0f);
-                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
-                float centerY = (GetScreenHeight() - 750);             // Vertical position (adjust as needed)
-                // Draw the green highlight first (outline effect) using a small offset
+                // Draw the black highlight first (outline effect) using a small offset
                 for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                            DrawTextEx(arcadeFont, gameMessage.c_str(), 
+                            {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage.c_str(), 75.0f, 1.0f).x) / 2.0f + (float)x, 
+                            (float) (GetScreenHeight() - 750) + (float)y}, 75.0f, 1.0f, BLACK);
+                        }
+                    }
+                }
+
+                // Then draw the actual message in yellow (on top of the green highlight)
                 DrawTextEx(arcadeFont, gameMessage.c_str(), 
-                (Vector2){centerX + (float)x, centerY + (float)y}, 
-                75.0f, 1.0f, BLACK);}}}
-                // Then draw the actual message in black (on top of the green highlight)
-                DrawTextEx(arcadeFont, gameMessage.c_str(), 
-                (Vector2){centerX, centerY}, 
-                75.0f, 1.0f, YELLOW);}
+                {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage.c_str(), 75.0f, 1.0f).x) / 2.0f, 
+                (float) (GetScreenHeight() - 750)}, 75.0f, 1.0f, YELLOW);}
                 
             if (!gameMessage1.empty()) {
-                // Calculate the width of the text to center it
-                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f);
-                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
-                float centerY = (GetScreenHeight() - 660);             // Vertical position (adjust as needed)
-                // Draw the green highlight first (outline effect) using a small offset
                 for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) { 
+                            DrawTextEx(arcadeFont, gameMessage1.c_str(), 
+                            {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f).x) / 2.0f + (float)x,
+                            (float) (GetScreenHeight() - 750) + (float)y}, 30.0f, 1.0f, BLACK);
+                        }
+                    }
+                }
+
                 DrawTextEx(arcadeFont, gameMessage1.c_str(), 
-                (Vector2){centerX + (float)x, centerY + (float)y}, 
-                30.0f, 1.0f, BLACK);}}}
-                // Then draw the actual message in black (on top of the green highlight)
-                DrawTextEx(arcadeFont, gameMessage1.c_str(), 
-                (Vector2){centerX, centerY}, 
-                30.0f, 1.0f, YELLOW);}
+                {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage1.c_str(), 30.0f, 1.0f).x) / 2.0f, 
+                (float) (GetScreenHeight() - 750)}, 30.0f, 1.0f, YELLOW);}
 
             if (!gameMessage2.empty()) {
-                // Calculate the width of the text to center it
-                Vector2 textSize = MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f);
-                float centerX = (GetScreenWidth() - textSize.x) / 2.0f; // Center horizontally
-                float centerY = (GetScreenHeight() - 610);             // Vertical position (adjust as needed)
-                // Draw the green highlight first (outline effect) using a small offset
                 for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                if (x != 0 || y != 0) { // Skip the center to avoid overlapping
-                DrawTextEx(arcadeFont, gameMessage2.c_str(), 
-                (Vector2){centerX + (float)x, centerY + (float)y}, 
-                30.0f, 1.0f, BLACK);}}}
+                    for (int y = -2; y <= 2; y++) {
+                        if (x != 0 || y != 0) {
+                            DrawTextEx(arcadeFont, gameMessage2.c_str(), 
+                            {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f).x) / 2.0f + (float)x, 
+                            (float) (GetScreenHeight() - 750) + (float)y}, 30.0f, 1.0f, BLACK);
+                        }
+                    }
+                }
 
-                // Then draw the actual message in black (on top of the green highlight)
                 DrawTextEx(arcadeFont, gameMessage2.c_str(), 
-                (Vector2){centerX, centerY}, 
-                30.0f, 1.0f, YELLOW);}
-
+                {(float) (GetScreenWidth() - MeasureTextEx(arcadeFont, gameMessage2.c_str(), 30.0f, 1.0f).x) / 2.0f, 
+                (float) (GetScreenHeight() - 750)}, 30.0f, 1.0f, YELLOW);
+            }
+            
             leaderboardsBtn.DrawButtonHorizontal();
             leaderboardsBtn.position.y = 580.0f;
             restartBtn.DrawButtonHorizontal();
@@ -1765,7 +1613,7 @@ int main(void)
             exitBtn.DrawButtonHorizontal();
             exitBtn.imgScale = 0.53f;
             exitBtn.position.y = 850.0f;
-            
+            break;
         default:
             break;
         }
