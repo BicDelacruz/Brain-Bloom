@@ -7,15 +7,10 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <algorithm>
 #include "raylib.h"
 #include "button.hpp"
 #include "questions.hpp"
-#include <ctime>
-#include <thread>
-#include <chrono>
-#include <algorithm>
-#include <stdio.h>
-#include <string.h>
 
 #define SINGLEPLAYER_DATA_FILE_PATH "data/singleplayer-data.bin" 
 #define MULTIPLAYER_DATA_FILE_PATH "data/multiplayer-data.bin" 
@@ -65,7 +60,7 @@ std::vector<std::string> WrapText(Font font, const char* text, int maxWidth, int
             currentWord += *ptr;
         }
 
-        ++ptr;
+        ptr++;
     }
 
     // Add the last word and line
@@ -120,7 +115,7 @@ void DrawAnswerText(Font font, const char *text, float fontSize, float spacing, 
                     float buttonX, float buttonY, float buttonWidth, float buttonHeight, int maxWidth, bool isMultiplayer) {
     // Wrap the text into multiple lines
     std::vector<std::string> lines = WrapText(font, text, maxWidth, fontSize);
-
+    
     // Calculate total height of wrapped text for vertical centering
     float totalHeight = lines.size() * fontSize;
 
@@ -331,10 +326,10 @@ int main(void)
     int screenHeight = 1080;
     InitWindow(screenWidth, screenHeight, "BRAIN BLOOM");
     InitAudioDevice();
-
+    
     // Game launches at fullscreen, can be changed in the games' settings, uncomment out when game is finished
     ToggleFullscreen();                   
-    SetExitKey(KEY_NULL);              
+    SetExitKey(KEY_NULL);            
     SetTargetFPS(60);
 
     //For Multiplayer name input
@@ -373,7 +368,6 @@ int main(void)
 
     bool muteMusic = false;
     bool muteUi = false;
-
     
 
     // Prevents mouse input when currentScreen transitions to RULES
@@ -1707,25 +1701,40 @@ int main(void)
     // TODO: Unload all loaded data (textures, fonts, audio) here!
     
     UnloadFont(arcadeFont);
+
     UnloadMusicStream(mainMenuMusic);
     UnloadMusicStream(singleplayerMusic);
     UnloadMusicStream(singleplayerLowHealthMusic);
+    UnloadMusicStream(multiplayerMusic);
+
     UnloadSound(menuButtonsSound);
     UnloadSound(wrongAnswerSound);
     UnloadSound(correctAnswerSound);
     UnloadSound(gameoverSound);
     UnloadSound(timesUpSound);
     UnloadSound(countdownSound);
+    UnloadSound(playerWins);
+    UnloadSound(bothWrong);
+    UnloadSound(playercorrect);
+
+
     UnloadTexture(menuBackground);
     UnloadTexture(titleLogo);
     UnloadTexture(pausedTxt);
     UnloadTexture(rulesScreen);
+    UnloadTexture(rulesScreen1);
     UnloadTexture(singleplayerBackground);
     UnloadTexture(settingsBackground);
     UnloadTexture(questionBox);
     UnloadTexture(exitBackground);
     UnloadTexture(readyScreen);
+    UnloadTexture(fiveHearts);
+    UnloadTexture(startGameBackground);
     UnloadTexture(gameoverBackground);
+    UnloadTexture(multiplayerBackground);
+    UnloadTexture(controlScreen2);
+    UnloadTexture(enterPlayerName);
+    UnloadTexture(leaderBoardBackground);
     UnloadTexture(health_1);
     UnloadTexture(health_2);
     UnloadTexture(health_3);
