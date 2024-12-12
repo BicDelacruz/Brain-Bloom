@@ -333,7 +333,7 @@ int main(void)
     InitAudioDevice();
 
     // Game launches at fullscreen, can be changed in the games' settings, uncomment out when game is finished
-    //ToggleFullscreen();                   
+    ToggleFullscreen();                   
     SetExitKey(KEY_NULL);              
     SetTargetFPS(60);
 
@@ -451,7 +451,7 @@ int main(void)
         gameMessage1 = "";
         gameMessage2 = "";
 
-        if (currentScreen == MAIN_MENU || currentScreen == SINGLEPLAYER_GAMEOVER) {
+        if (currentScreen == MAIN_MENU || currentScreen == SINGLEPLAYER_GAMEOVER || currentScreen == MULTIPLAYER_GAMEOVER) {
             score = 0;
             healthPoints = 10;
 
@@ -479,6 +479,7 @@ int main(void)
             gameMessage = "";
             gameMessage1 = "";
             gameMessage2 = "";
+            gameOverDelayTimer = 0.0f;
 
         }
     };
@@ -539,7 +540,6 @@ int main(void)
     Texture2D startGameBackground = LoadTexture("assets/start-game-bg.png");
     Texture2D exitBackground = LoadTexture("assets/exit-bg.png");
     Texture2D readyScreen = LoadTexture("assets/ready-screen.png");
-    Texture2D soundIcon = LoadTexture("assets/sound-ic.png");
 
     // Singleplayer Textures
     Texture2D singleplayerBackground = LoadTexture("assets/singleplayer-bg.png");
@@ -629,20 +629,6 @@ int main(void)
                 
                 // Reset variables
                 ResetGameVariables();
-
-                gameOverDelayTimer = 0.0f;
-                isGameOverTriggered = false;
-                player1Name = "";
-                player2Name = "";
-                enteringPlayer1Name = false;
-                enteringPlayer2Name = false;
-                namesEntered = false;
-                player1Score = 0;
-                player2Score = 0;
-                player1Healthpoints = 10;
-                player2Healthpoints = 10;
-                gameMessage1 = "";
-                gameMessage2 = "";
 
                 exitBtn.imgScale = 0.6f;
                 exitBtn.position.y = 730.0f;
@@ -1113,7 +1099,7 @@ int main(void)
                 if (player1Healthpoints == 1 || player2Healthpoints == 1) {
                     StopMusicStream(multiplayerMusic);
                     if (!IsMusicStreamPlaying(singleplayerLowHealthMusic)) {
-                    PlayMusicStream(singleplayerLowHealthMusic);
+                        PlayMusicStream(singleplayerLowHealthMusic);
                     }
                     UpdateMusicStream(singleplayerLowHealthMusic);  // Update music stream to continue playing it
                     }
@@ -1207,8 +1193,9 @@ int main(void)
                 }
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
                     ResetGameVariables();
-
-                    currentScreen = SINGLEPLAYER_RULES; } 
+                    
+                    currentScreen = SINGLEPLAYER_RULES; 
+                } 
                 break;
             case MULTIPLAYER_GAMEOVER:
                 if (!IsMusicStreamPlaying(multiplayerMusic)) {
@@ -1233,21 +1220,10 @@ int main(void)
                 if (mainMenuBtn.isClicked(mousePosition, mouseClicked)) currentScreen = MAIN_MENU;
                 if (exitBtn.isClicked(mousePosition, mouseClicked)) currentScreen = EXIT;
                 if (restartBtn.isClicked(mousePosition, mouseClicked)) {    // Reset variables and return to RULES GameScreen
-                    gameOverDelayTimer = 0.0f;
                     isGameOverTriggered = false;
-                    player1Name = "";
-                    player2Name = "";
-                    enteringPlayer1Name = false;
-                    enteringPlayer2Name = false;
-                    namesEntered = false;
-                    player1Score = 0;
-                    player2Score = 0;
-                    player1Healthpoints = 10;
-                    player2Healthpoints = 10;
-                    gameMessage1 = "";
-                    gameMessage2 = "";
                     ResetGameVariables();
-                    currentScreen = MULTIPLAYER_RULES; } 
+                    currentScreen = MULTIPLAYER_RULES; 
+                } 
                 break;
             case LEADERBOARDS:
                 if (!IsMusicStreamPlaying(multiplayerMusic)) {
@@ -1374,15 +1350,23 @@ int main(void)
             DrawTextHighlight(arcadeFont, "Player 2", 1610.0f, 240.0f, 20.0f, 0.5f, PURPLE);
 
             for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);}}}
+                for (int y = -2; y <= 2; y++) {
+                    if (x != 0 || y != 0) {
+                        DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212 + x, 190 + y, 10, 40, screenWidth * 0.8f, ORANGE);
+                    }
+                }
+            }
+
             DrawCenteredTextAtX(player1Name.c_str(), arcadeFont, 212, 190, 10, 40, screenWidth * 0.8f, BLACK);
 
             for (int x = -2; x <= 2; x++) {
-            for (int y = -2; y <= 2; y++) {
-            if (x != 0 || y != 0) {
-            DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);}}}
+                for (int y = -2; y <= 2; y++) {
+                    if (x != 0 || y != 0) {
+                        DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690 + x, 190 + y, 10, 40, screenWidth * 0.8f, PURPLE);
+                    }
+                }
+            }
+
             DrawCenteredTextAtX(player2Name.c_str(), arcadeFont, 1690, 190, 10, 40, screenWidth * 0.8f, BLACK);
 
             // Draw Player 1 score
@@ -1742,7 +1726,6 @@ int main(void)
     UnloadTexture(exitBackground);
     UnloadTexture(readyScreen);
     UnloadTexture(gameoverBackground);
-    UnloadTexture(soundIcon);
     UnloadTexture(health_1);
     UnloadTexture(health_2);
     UnloadTexture(health_3);
